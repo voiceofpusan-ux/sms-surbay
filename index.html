@@ -275,6 +275,31 @@ footer .fr{font-size:12px;color:rgba(255,255,255,.2)}
 .reveal.visible{opacity:1;transform:translateY(0)}
 
 /* ── RESPONSIVE ── */
+/* 방식별 정밀 비교 */
+#compare{background:var(--slate);padding:100px 0}
+.cmp-wrap{margin-top:56px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:18px;box-shadow:0 16px 50px rgba(13,27,62,.08)}
+.cmp-table{width:100%;min-width:760px;border-collapse:collapse;background:var(--white);font-size:14px}
+.cmp-table th,.cmp-table td{padding:18px 16px;text-align:center;border-bottom:1px solid var(--slate2)}
+.cmp-table thead th{font-size:13px;font-weight:700;color:var(--gray2);background:var(--slate);border-bottom:2px solid var(--slate2)}
+.cmp-table thead th.cmp-sms{color:var(--white);background:var(--navy);border-bottom:2px solid var(--cyan)}
+.cmp-table tbody th{text-align:left;font-weight:700;color:var(--navy);white-space:nowrap;background:var(--white)}
+.cmp-table td.cmp-sms{background:rgba(0,229,212,.06);font-weight:600;color:var(--navy)}
+.cmp-table tbody tr:last-child td,.cmp-table tbody tr:last-child th{border-bottom:none}
+.cmp-good{color:var(--cyan2);font-weight:700}
+.cmp-mid{color:var(--gold)}
+.cmp-bad{color:var(--gray);font-weight:500}
+.cmp-sub{display:block;font-size:11px;color:var(--gray);font-weight:400;margin-top:3px}
+.cmp-deep{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:40px}
+.cmp-dcard{background:var(--white);border:1px solid var(--slate2);border-radius:16px;padding:30px 28px;position:relative;overflow:hidden;transition:transform .3s,box-shadow .3s}
+.cmp-dcard:hover{transform:translateY(-4px);box-shadow:0 18px 44px rgba(0,0,0,.08)}
+.cmp-dcard::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(180deg,var(--cyan),var(--cyan2))}
+.cmp-dh{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.cmp-dico{font-size:30px}
+.cmp-dt{font-size:18px;font-weight:800;color:var(--navy);line-height:1.3}
+.cmp-dp{font-size:14px;color:var(--gray2);line-height:1.8}
+.cmp-dp strong{color:var(--cyan2)}
+.cmp-dp .vs{color:var(--gray2);font-weight:700}
+@media(max-width:600px){.cmp-deep{grid-template-columns:1fr}}
 @media(max-width:900px){
   .hero-inner,.case-inner{grid-template-columns:1fr}
   .hero-right,.orbit{display:none}
@@ -302,6 +327,7 @@ footer .fr{font-size:12px;color:rgba(255,255,255,.2)}
     <a href="#problem">문제 인식</a>
     <a href="#how">서비스</a>
     <a href="#case">사례</a>
+    <a href="#compare">비교</a>
     <a href="#packages">패키지</a>
   </div>
   <a href="#cta" class="nav-cta">문의하기</a>
@@ -1080,6 +1106,108 @@ footer .fr{font-size:12px;color:rgba(255,255,255,.2)}
         <div class="dc-ico">🔒</div>
         <div class="dc-title">신뢰 구축 효과</div>
         <div class="dc-desc">결과를 돌려주는 쌍방향 소통이 기관·단체의 이미지와 주민 참여율을 지속적으로 높입니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section id="compare">
+  <div class="container">
+    <div class="reveal">
+      <div class="tag">In-Depth Comparison</div>
+      <h2 class="section-title">일반 서베이 방식과<br><span>무엇이 다른가</span></h2>
+      <p class="section-desc">전화 여론조사·온라인 패널·대면/우편 설문 등 기존 조사 방식과 핵심 지표를 항목별로 비교했습니다.</p>
+    </div>
+
+    <div class="cmp-wrap reveal">
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>비교 항목</th>
+            <th class="cmp-sms">SMS 서베이</th>
+            <th>전화 여론조사<br><span class="cmp-sub">(ARS·전화면접)</span></th>
+            <th>온라인 패널조사</th>
+            <th>대면 · 우편 설문</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>응답률 · 회수율</th>
+            <td class="cmp-sms"><span class="cmp-good">실발송 대비 3~5%</span><span class="cmp-sub">관심층 자발 응답·진성 표본</span></td>
+            <td><span class="cmp-bad">1~2%</span><span class="cmp-sub">발신번호 차단·거절 급증</span></td>
+            <td><span class="cmp-mid">패널 한정</span><span class="cmp-sub">기존 가입자만 응답</span></td>
+            <td><span class="cmp-bad">5% 미만</span><span class="cmp-sub">배포·수거 손실 큼</span></td>
+          </tr>
+          <tr>
+            <th>1인당 비용</th>
+            <td class="cmp-sms"><span class="cmp-good">수십 원대</span><span class="cmp-sub">문자 단가 기반</span></td>
+            <td><span class="cmp-bad">수천 원</span><span class="cmp-sub">콜센터·전문기관 의뢰</span></td>
+            <td><span class="cmp-mid">수천 원</span><span class="cmp-sub">패널 사례비·플랫폼비</span></td>
+            <td><span class="cmp-bad">수천~만 원</span><span class="cmp-sub">인쇄·우편·인건비</span></td>
+          </tr>
+          <tr>
+            <th>소요 기간</th>
+            <td class="cmp-sms"><span class="cmp-good">수 시간~수일</span><span class="cmp-sub">발송 즉시 실시간 집계</span></td>
+            <td><span class="cmp-mid">3~7일</span><span class="cmp-sub">콜 진행·코딩 필요</span></td>
+            <td><span class="cmp-mid">3~7일</span><span class="cmp-sub">모집·할당 대기</span></td>
+            <td><span class="cmp-bad">2~4주</span><span class="cmp-sub">배포·수거·입력 지연</span></td>
+          </tr>
+          <tr>
+            <th>고령층 · 디지털 소외층</th>
+            <td class="cmp-sms"><span class="cmp-good">포함</span><span class="cmp-sub">앱 불필요·기본 문자만</span></td>
+            <td><span class="cmp-good">포함</span><span class="cmp-sub">단, 거부감 높음</span></td>
+            <td><span class="cmp-bad">배제</span><span class="cmp-sub">스마트폰·가입 필수</span></td>
+            <td><span class="cmp-mid">일부</span><span class="cmp-sub">문해·작성 부담</span></td>
+          </tr>
+          <tr>
+            <th>표본 편향</th>
+            <td class="cmp-sms"><span class="cmp-good">낮음</span><span class="cmp-sub">실제 주민 연락처 기반</span></td>
+            <td><span class="cmp-mid">중간</span><span class="cmp-sub">받는 사람만 응답</span></td>
+            <td><span class="cmp-bad">높음</span><span class="cmp-sub">패널 자기선택 편향</span></td>
+            <td><span class="cmp-mid">중간</span><span class="cmp-sub">적극층 위주</span></td>
+          </tr>
+          <tr>
+            <th>지역 · 단지 정밀 타겟</th>
+            <td class="cmp-sms"><span class="cmp-good">정확</span><span class="cmp-sub">보유 연락처 그대로 조준</span></td>
+            <td><span class="cmp-bad">부정확</span><span class="cmp-sub">지역번호로 추정만</span></td>
+            <td><span class="cmp-bad">불가</span><span class="cmp-sub">동 단위 분해 어려움</span></td>
+            <td><span class="cmp-mid">가능</span><span class="cmp-sub">단, 고비용·저속</span></td>
+          </tr>
+          <tr>
+            <th>결과 환류(피드백)</th>
+            <td class="cmp-sms"><span class="cmp-good">자동</span><span class="cmp-sub">응답자 전원에 리포트 발송</span></td>
+            <td><span class="cmp-bad">없음</span><span class="cmp-sub">일방향 수집</span></td>
+            <td><span class="cmp-bad">없음</span><span class="cmp-sub">사례비로 종료</span></td>
+            <td><span class="cmp-bad">없음</span><span class="cmp-sub">결과 비공개</span></td>
+          </tr>
+          <tr>
+            <th>분석 · 리포트</th>
+            <td class="cmp-sms"><span class="cmp-good">AI 자동</span><span class="cmp-sub">수집~리포트 무인 처리</span></td>
+            <td><span class="cmp-mid">수작업</span><span class="cmp-sub">코딩·집계 인력 필요</span></td>
+            <td><span class="cmp-good">자동</span><span class="cmp-sub">플랫폼 의존</span></td>
+            <td><span class="cmp-bad">수작업</span><span class="cmp-sub">입력·정제 다수</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmp-deep reveal">
+      <div class="cmp-dcard">
+        <div class="cmp-dh"><div class="cmp-dico">🎯</div><div class="cmp-dt">'추정 표본'이 아닌 '실제 주민'에게 묻습니다</div></div>
+        <p class="cmp-dp">전화 여론조사는 지역번호로 대상을 <span class="vs">추정</span>하고, 온라인 패널은 전국 가입자 풀에서 <span class="vs">할당</span>할 뿐입니다. SMS 서베이는 <strong>이미 보유한 해당 지역·단지 주민 연락처</strong>로 직접 발송하기 때문에, 표본이 곧 진짜 이해당사자입니다. 아파트 단지·선거구 단위처럼 정밀한 모집단일수록 다른 방식은 구조적으로 도달하지 못합니다.</p>
+      </div>
+      <div class="cmp-dcard">
+        <div class="cmp-dh"><div class="cmp-dico">👵</div><div class="cmp-dt">고령층까지 끌어안아 진짜 민심을 담습니다</div></div>
+        <p class="cmp-dp">온라인 설문은 스마트폰·앱·회원가입이 전제라 <span class="vs">디지털 소외 계층이 통째로 빠집니다.</span> SMS 서베이는 30년 전 휴대폰으로도 받는 <strong>기본 문자 한 통</strong>으로 참여가 끝납니다. 60·70대 응답이 포함되므로 특정 연령대로 왜곡되지 않은 균형 잡힌 결과를 얻습니다.</p>
+      </div>
+      <div class="cmp-dcard">
+        <div class="cmp-dh"><div class="cmp-dico">💸</div><div class="cmp-dt">1/10 비용으로 더 자주, 더 빠르게</div></div>
+        <p class="cmp-dp">전문 여론조사는 1인당 수천 원, 전체로는 수백만 원이 듭니다. SMS 서베이는 <strong>문자 단가 기반 수십 원대</strong>라 같은 예산으로 <span class="vs">10배 더 큰 표본</span> 또는 <span class="vs">10배 더 자주</span> 조사할 수 있습니다. 한 번의 큰 조사가 아니라, 현안이 생길 때마다 가볍게 반복하는 상시 소통이 가능해집니다.</p>
+      </div>
+      <div class="cmp-dcard">
+        <div class="cmp-dh"><div class="cmp-dico">🔄</div><div class="cmp-dt">결과를 돌려주는 '쌍방향' 조사입니다</div></div>
+        <p class="cmp-dp">기존 조사는 의견만 가져가고 끝나는 <span class="vs">일방향</span>입니다. SMS 서베이는 분석이 끝나면 <strong>응답자 전원에게 결과 리포트를 문자로 회신</strong>합니다. 헬리오시티 사례에서 약속대로 결과를 돌려주자 1,700명이 자발적으로 리포트를 열람했습니다. 이 신뢰가 다음 조사의 응답률을 끌어올리는 선순환을 만듭니다.</p>
       </div>
     </div>
   </div>

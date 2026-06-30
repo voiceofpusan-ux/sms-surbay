@@ -56,6 +56,15 @@ npx vercel dev              # 로컬 서버 (api 함수 포함)
 
 `REPORT_ENCRYPTION_KEY` 생성: `openssl rand -hex 32`
 
+## 슈퍼 어드민(담당자) — 본문 열람 권한
+
+본문은 오직 슈퍼 어드민만 `/api/admin`을 통해 복호화하여 볼 수 있습니다.
+
+- 인증은 `ADMIN_TOKEN`(Bearer) = **슈퍼 어드민 암호**로 합니다.
+- **암호는 반드시 20자 이상**이어야 합니다. 미설정이거나 20자 미만이면 관리 기능이 자동 비활성화(`503`)됩니다.
+- 토큰 비교는 타이밍 공격에 안전한 `crypto.timingSafeEqual`로 수행합니다.
+- 강력한 암호 생성: `openssl rand -base64 32`
+
 ## 담당자 대시보드(API)
 
 ```bash

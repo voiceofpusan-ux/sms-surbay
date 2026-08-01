@@ -12,6 +12,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 let queue = [];
 let nextId = 1;
 
+const NO_SHOW_MS = 10 * 60 * 1000; // 내 차례가 된 뒤 착석확인 없이 10분 지나면 자동 노쇼 처리
+
 function waitingEntries() {
   return queue.filter((e) => e.status === 'waiting').sort((a, b) => a.registeredAt - b.registeredAt);
 }
@@ -19,6 +21,20 @@ function waitingEntries() {
 function positionOf(entry) {
   const waiting = waitingEntries();
   return waiting.findIndex((e) => e.id === entry.id); // 0 = 내 차례, 1 = 1팀 남음 ...
+}
+
+// 대기 1등(내 차례)이 된 시점을 기록하고, 10분간 착석확인이 없으면 직원 개입 없이 자동 노쇼 처리
+function refreshQueue() {
+  const now = Date.now();
+  for (const e of queue) {
+    if (e.status === 'waiting' && e.becameFirstAt && now - e.becameFirstAt > NO_SHOW_MS) {
+      e.status = 'noshow';
+    }
+  }
+  const waiting = waitingEntries();
+  if (waiting.length > 0 && !waiting[0].becameFirstAt) {
+    waiting[0].becameFirstAt = now;
+  }
 }
 
 // 손님 셀프 등록
@@ -35,6 +51,7 @@ app.post('/api/register', (req, res) => {
     partySize: Number(partySize),
     registeredAt: Date.now(),
     status: 'waiting',
+    becameFirstAt: null,
   };
   queue.push(entry);
   res.json({ token: entry.token });
@@ -42,6 +59,7 @@ app.post('/api/register', (req, res) => {
 
 // 손님 본인 대기 현황 조회 (새로고침할 때마다 호출)
 app.get('/api/status/:token', (req, res) => {
+  refreshQueue();
   const entry = queue.find((e) => e.token === req.params.token);
   if (!entry) return res.status(404).json({ error: '등록 정보를 찾을 수 없습니다.' });
 
@@ -55,6 +73,7 @@ app.get('/api/status/:token', (req, res) => {
 
 // 손님 착석확인 (직원이 요청하면 손님이 직접 클릭)
 app.post('/api/confirm/:token', (req, res) => {
+  refreshQueue();
   const entry = queue.find((e) => e.token === req.params.token);
   if (!entry) return res.status(404).json({ error: '등록 정보를 찾을 수 없습니다.' });
   if (entry.status === 'waiting') entry.status = 'seated';
@@ -63,6 +82,7 @@ app.post('/api/confirm/:token', (req, res) => {
 
 // 직원용: 현재 대기열 목록 (읽기 전용 + 취소 처리)
 app.get('/api/admin/queue', (req, res) => {
+  refreshQueue();
   const waiting = waitingEntries().map((e, idx) => ({
     id: e.id,
     rank: idx + 1,

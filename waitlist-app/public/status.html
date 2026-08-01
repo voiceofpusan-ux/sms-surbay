@@ -68,6 +68,12 @@ function render(data) {
     sub.textContent = '문의사항은 직원에게 말씀해주세요.';
     return;
   }
+  if (data.status === 'noshow') {
+    big.textContent = '⏱️';
+    msg.textContent = '노쇼 처리되었습니다.';
+    sub.textContent = '착석확인 시간이 지나 대기가 취소되었습니다. 다시 등록해주세요.';
+    return;
+  }
 
   const position = data.position; // 0 = 내 차례, 1 = 1팀 남음
   confirmBtn.style.display = 'block';
@@ -75,8 +81,8 @@ function render(data) {
   if (position === 0) {
     box.classList.add('now');
     big.textContent = '🎉';
-    msg.textContent = '지금 입장하실 차례입니다!';
-    sub.textContent = '직원 안내에 따라 매장으로 들어와 주세요.';
+    msg.textContent = '대기 인수가 없습니다.';
+    sub.textContent = '착석확인을 10분 안에 하지 않으면 노쇼 처리되어 다시 대기하셔야 됩니다.';
   } else if (position === 1) {
     box.classList.add('ready');
     big.textContent = '1';

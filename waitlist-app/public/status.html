@@ -55,6 +55,7 @@ async function load() {
 function render(data) {
   box.className = 'status-box';
   confirmBtn.style.display = 'none';
+  document.getElementById('title').textContent = `${data.businessName} 대기 현황`;
 
   if (data.status === 'seated') {
     big.textContent = '✅';
@@ -82,7 +83,7 @@ function render(data) {
     box.classList.add('now');
     big.textContent = '🎉';
     msg.textContent = '대기 인수가 없습니다.';
-    sub.textContent = '착석확인을 10분 안에 하지 않으면 노쇼 처리되어 다시 대기하셔야 됩니다.';
+    sub.textContent = `착석확인을 ${data.noShowMinutes}분 안에 하지 않으면 노쇼 처리되어 다시 대기하셔야 됩니다.`;
   } else if (position === 1) {
     box.classList.add('ready');
     big.textContent = '1';

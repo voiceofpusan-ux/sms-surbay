@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대기열 관리 (직원용)</title>
+<link rel="stylesheet" href="style.css">
+<style>.card{max-width:640px}</style>
+</head>
+<body>
+<div class="card">
+  <h1>대기열 현황</h1>
+  <p class="desc">손님이 직접 착석확인을 누르면 이 목록에서 자동으로 사라집니다. 연락이 안 되거나 오지 않는 손님은 취소 처리해주세요.</p>
+  <button class="ghost" id="refreshBtn">🔄 새로고침</button>
+  <table id="table">
+    <thead>
+      <tr><th>순번</th><th>이름</th><th>인원</th><th>연락처</th><th>대기시간</th><th></th></tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="error" id="err"></div>
+</div>
+
+<script>
+const tbody = document.getElementById('tbody');
+const err = document.getElementById('err');
+
+async function load() {
+  err.textContent = '';
+  try {
+    const res = await fetch('/api/admin/queue');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+    render(data.queue);
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+
+function render(queue) {
+  tbody.innerHTML = '';
+  if (queue.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#8898AA">현재 대기 중인 손님이 없습니다.</td></tr>';
+    return;
+  }
+  for (const e of queue) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${e.rank}</td>
+      <td>${escapeHtml(e.name)}</td>
+      <td>${e.partySize}명</td>
+      <td>${escapeHtml(e.phone) || '-'}</td>
+      <td>${e.waitingMinutes}분</td>
+      <td><button class="danger" data-id="${e.id}">취소</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+  tbody.querySelectorAll('button.danger').forEach((btn) => {
+    btn.addEventListener('click', () => cancel(btn.dataset.id));
+  });
+}
+
+async function cancel(id) {
+  if (!confirm('이 손님을 대기열에서 취소 처리할까요?')) return;
+  await fetch(`/api/admin/cancel/${id}`, { method: 'POST' });
+  load();
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

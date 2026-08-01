@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대기 등록</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="card">
+  <h1>매장 대기 등록</h1>
+  <p class="desc">이름과 인원수를 입력하고 등록하면, 문자 없이 이 웹페이지에서 대기 순서를 바로 확인하실 수 있습니다.</p>
+
+  <form id="regForm">
+    <label>이름</label>
+    <input type="text" id="name" required placeholder="홍길동">
+
+    <label>인원수</label>
+    <input type="number" id="partySize" min="1" required placeholder="2">
+
+    <label>연락처 (선택)</label>
+    <input type="tel" id="phone" placeholder="010-0000-0000">
+
+    <button type="submit">대기 등록하기</button>
+  </form>
+  <div class="error" id="err"></div>
+</div>
+
+<script>
+const form = document.getElementById('regForm');
+const err = document.getElementById('err');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.textContent = '';
+  const name = document.getElementById('name').value.trim();
+  const partySize = document.getElementById('partySize').value;
+  const phone = document.getElementById('phone').value.trim();
+
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, partySize, phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
+    location.href = `status.html?token=${data.token}`;
+  } catch (e2) {
+    err.textContent = e2.message;
+  }
+});
+</script>
+</body>
+</html>

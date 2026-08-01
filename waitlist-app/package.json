@@ -1,0 +1,12 @@
+{
+  "name": "waitlist-app",
+  "version": "1.0.0",
+  "description": "SMS 없이 웹페이지로 확인하는 매장 대기열(웨이팅) 관리 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

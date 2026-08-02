@@ -27,6 +27,20 @@
   <h1>대기열 현황</h1>
   <p class="desc">손님이 직접 착석확인을 누르면 이 목록에서 자동으로 사라집니다. 연락이 안 되거나 오지 않는 손님은 취소 처리해주세요.</p>
   <button class="ghost" id="refreshBtn">🔄 새로고침</button>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+    <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px">
+      <input type="checkbox" id="autoRefreshToggle" style="width:auto">
+      자동 새로고침
+    </label>
+    <select id="autoRefreshInterval" style="width:auto;padding:6px 10px;border:1px solid #E2E9F4;border-radius:8px;font-size:13px">
+      <option value="5">5초</option>
+      <option value="10" selected>10초</option>
+      <option value="30">30초</option>
+      <option value="60">1분</option>
+    </select>
+  </div>
+
   <table id="table">
     <thead>
       <tr><th>순번</th><th>이름</th><th>인원</th><th>연락처</th><th>대기시간</th><th></th></tr>
@@ -114,8 +128,32 @@ function escapeHtml(s) {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', load);
+
+const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+const autoRefreshInterval = document.getElementById('autoRefreshInterval');
+let autoRefreshTimer = null;
+
+function applyAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  localStorage.setItem('waitlistAutoRefresh', autoRefreshToggle.checked ? '1' : '0');
+  localStorage.setItem('waitlistAutoRefreshSec', autoRefreshInterval.value);
+  if (autoRefreshToggle.checked) {
+    autoRefreshTimer = setInterval(load, Number(autoRefreshInterval.value) * 1000);
+  }
+}
+
+autoRefreshToggle.addEventListener('change', applyAutoRefresh);
+autoRefreshInterval.addEventListener('change', applyAutoRefresh);
+
+autoRefreshToggle.checked = localStorage.getItem('waitlistAutoRefresh') === '1';
+autoRefreshInterval.value = localStorage.getItem('waitlistAutoRefreshSec') || '10';
+
 loadSettings();
 load();
+applyAutoRefresh();
 </script>
 </body>
 </html>

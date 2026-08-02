@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대기열 관리 (직원용)</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.card{max-width:640px}
+body{display:block;padding:24px 16px}
+.page{max-width:640px;margin:0 auto}
+.tabs{display:flex;gap:8px;margin-bottom:16px;background:#fff;padding:6px;border-radius:10px;box-shadow:0 4px 16px rgba(13,27,62,.06)}
+.tab-btn{flex:1;padding:12px;border:none;border-radius:8px;background:transparent;color:#556077;font-size:14px;font-weight:700;cursor:pointer}
+.tab-btn.active{background:#0D1B3E;color:#fff}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="tabs">
+  <button class="tab-btn" id="tabBtnStatus" data-tab="status">대기열 현황</button>
+  <button class="tab-btn" id="tabBtnSettings" data-tab="settings">대기열 관리 설정</button>
+</nav>
+
+<div class="tab-panel" id="tabStatus">
+<div class="card">
+  <h1>대기열 현황</h1>
+  <p class="desc">손님이 직접 착석확인을 누르면 이 목록에서 자동으로 사라집니다. 연락이 안 되거나 오지 않는 손님은 취소 처리해주세요.</p>
+  <button class="ghost" id="refreshBtn">🔄 새로고침</button>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+    <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px">
+      <input type="checkbox" id="autoRefreshToggle" style="width:auto">
+      자동 새로고침
+    </label>
+    <select id="autoRefreshInterval" style="width:auto;padding:6px 10px;border:1px solid #E2E9F4;border-radius:8px;font-size:13px">
+      <option value="5">5초</option>
+      <option value="10" selected>10초</option>
+      <option value="30">30초</option>
+      <option value="60">1분</option>
+    </select>
+  </div>
+
+  <table id="table">
+    <thead>
+      <tr><th>순번</th><th>이름</th><th>인원</th><th>연락처</th><th>대기시간</th><th></th></tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="error" id="err"></div>
+</div>
+</div>
+
+<div class="tab-panel" id="tabSettings" style="display:none">
+<div class="card">
+  <h1>대기열 관리 설정</h1>
+  <p class="desc">손님 화면에 표시될 업체명과, 내 차례가 된 뒤 자동 노쇼 처리까지 걸리는 시간을 설정합니다.</p>
+
+  <label>업체명</label>
+  <input type="text" id="businessName" placeholder="내 매장">
+
+  <label>노쇼 제한시간 (분)</label>
+  <input type="number" id="noShowMinutes" min="1" placeholder="10">
+
+  <button id="saveSettingsBtn">설정 저장</button>
+  <div class="error" id="settingsErr"></div>
+  <div class="hint" id="settingsSaved" style="display:none">저장되었습니다.</div>
+</div>
+</div>
+</div>
+
+<script>
+const tbody = document.getElementById('tbody');
+const err = document.getElementById('err');
+const settingsErr = document.getElementById('settingsErr');
+const settingsSaved = document.getElementById('settingsSaved');
+
+async function loadSettings() {
+  const res = await fetch('/api/settings');
+  const data = await res.json();
+  document.getElementById('businessName').value = data.businessName;
+  document.getElementById('noShowMinutes').value = data.noShowMinutes;
+}
+
+document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+  settingsErr.textContent = '';
+  settingsSaved.style.display = 'none';
+  const businessName = document.getElementById('businessName').value.trim();
+  const noShowMinutes = document.getElementById('noShowMinutes').value;
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessName, noShowMinutes }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '저장에 실패했습니다.');
+    settingsSaved.style.display = 'block';
+  } catch (e) {
+    settingsErr.textContent = e.message;
+  }
+});
+
+async function load() {
+  err.textContent = '';
+  try {
+    const res = await fetch('/api/admin/queue');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+    render(data.queue);
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+
+function render(queue) {
+  tbody.innerHTML = '';
+  if (queue.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#8898AA">현재 대기 중인 손님이 없습니다.</td></tr>';
+    return;
+  }
+  for (const e of queue) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${e.rank}</td>
+      <td>${escapeHtml(e.name)}</td>
+      <td>${e.partySize}명</td>
+      <td>${escapeHtml(e.phone) || '-'}</td>
+      <td>${e.waitingMinutes}분</td>
+      <td><button class="danger" data-id="${e.id}">취소</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+  tbody.querySelectorAll('button.danger').forEach((btn) => {
+    btn.addEventListener('click', () => cancel(btn.dataset.id));
+  });
+}
+
+async function cancel(id) {
+  if (!confirm('이 손님을 대기열에서 취소 처리할까요?')) return;
+  await fetch(`/api/admin/cancel/${id}`, { method: 'POST' });
+  load();
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+
+const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+const autoRefreshInterval = document.getElementById('autoRefreshInterval');
+let autoRefreshTimer = null;
+
+function applyAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  localStorage.setItem('waitlistAutoRefresh', autoRefreshToggle.checked ? '1' : '0');
+  localStorage.setItem('waitlistAutoRefreshSec', autoRefreshInterval.value);
+  if (autoRefreshToggle.checked) {
+    autoRefreshTimer = setInterval(load, Number(autoRefreshInterval.value) * 1000);
+  }
+}
+
+autoRefreshToggle.addEventListener('change', applyAutoRefresh);
+autoRefreshInterval.addEventListener('change', applyAutoRefresh);
+
+autoRefreshToggle.checked = localStorage.getItem('waitlistAutoRefresh') === '1';
+autoRefreshInterval.value = localStorage.getItem('waitlistAutoRefreshSec') || '10';
+
+loadSettings();
+load();
+applyAutoRefresh();
+
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanels = { status: document.getElementById('tabStatus'), settings: document.getElementById('tabSettings') };
+
+function showTab(name) {
+  tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === name));
+  Object.entries(tabPanels).forEach(([key, panel]) => {
+    panel.style.display = key === name ? 'block' : 'none';
+  });
+  localStorage.setItem('waitlistAdminTab', name);
+}
+
+tabButtons.forEach((btn) => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+showTab(localStorage.getItem('waitlistAdminTab') || 'status');
+</script>
+</body>
+</html>

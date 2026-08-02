@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내 대기 순서</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="card">
+  <h1 id="title">대기 현황</h1>
+  <p class="desc">문자는 보내지 않습니다. 원하실 때 아래 새로고침 버튼을 눌러 최신 순서를 확인해 주세요.</p>
+
+  <div class="status-box" id="box">
+    <div class="big" id="big">-</div>
+    <div class="msg" id="msg">불러오는 중...</div>
+    <div class="sub" id="sub"></div>
+  </div>
+
+  <button class="ghost" id="refreshBtn">🔄 새로고침</button>
+  <button class="confirm" id="confirmBtn" style="display:none">착석확인 (매장에 자리 잡으셨다면 눌러주세요)</button>
+  <div class="error" id="err"></div>
+
+  <p class="hint">직원 안내에 따라 매장에 착석하신 후에만 착석확인을 눌러주세요.</p>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const token = params.get('token');
+const big = document.getElementById('big');
+const msg = document.getElementById('msg');
+const sub = document.getElementById('sub');
+const box = document.getElementById('box');
+const err = document.getElementById('err');
+const confirmBtn = document.getElementById('confirmBtn');
+
+if (!token) {
+  msg.textContent = '등록 정보가 없습니다. 처음 화면에서 다시 등록해주세요.';
+} else {
+  load();
+}
+
+async function load() {
+  err.textContent = '';
+  try {
+    const res = await fetch(`/api/status/${token}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+    render(data);
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+
+function render(data) {
+  box.className = 'status-box';
+  confirmBtn.style.display = 'none';
+  document.getElementById('title').textContent = `${data.businessName} 대기 현황`;
+
+  if (data.status === 'seated') {
+    big.textContent = '✅';
+    msg.textContent = '착석확인 완료! 즐거운 식사 되세요.';
+    sub.textContent = '';
+    return;
+  }
+  if (data.status === 'cancelled') {
+    big.textContent = '❌';
+    msg.textContent = '대기가 취소되었습니다.';
+    sub.textContent = '문의사항은 직원에게 말씀해주세요.';
+    return;
+  }
+  if (data.status === 'noshow') {
+    big.textContent = '⏱️';
+    msg.textContent = '노쇼 처리되었습니다.';
+    sub.textContent = '착석확인 시간이 지나 대기가 취소되었습니다. 다시 등록해주세요.';
+    return;
+  }
+
+  const position = data.position; // 0 = 내 차례, 1 = 1팀 남음
+  confirmBtn.style.display = 'block';
+
+  if (position === 0) {
+    box.classList.add('now');
+    big.textContent = '🎉';
+    msg.textContent = '대기 인수가 없습니다.';
+    sub.textContent = `착석확인을 ${data.noShowMinutes}분 안에 하지 않으면 노쇼 처리되어 다시 대기하셔야 됩니다.`;
+  } else if (position === 1) {
+    box.classList.add('ready');
+    big.textContent = '1';
+    msg.textContent = '대기손님이 1명입니다. 입장 준비해주세요!';
+    sub.textContent = `${data.name}님, ${data.partySize}명`;
+  } else {
+    big.textContent = position;
+    msg.textContent = `현재 내 앞에 ${position}팀이 대기 중입니다.`;
+    sub.textContent = `${data.name}님, ${data.partySize}명`;
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', load);
+
+confirmBtn.addEventListener('click', async () => {
+  err.textContent = '';
+  try {
+    const res = await fetch(`/api/confirm/${token}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '처리에 실패했습니다.');
+    load();
+  } catch (e) {
+    err.textContent = e.message;
+  }
+});
+</script>
+</body>
+</html>

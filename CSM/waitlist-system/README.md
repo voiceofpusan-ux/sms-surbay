@@ -14,7 +14,6 @@
 ## 실행 방법
 
 ```bash
-cd waitlist-app
 npm install
 npm start
 ```
@@ -22,7 +21,45 @@ npm start
 - 손님 등록 페이지: `http://localhost:3000/index.html`
 - 직원 관리 화면: `http://localhost:3000/admin.html`
 
-## 참고
+## 저장소 (로컬 메모리 vs Supabase)
 
-- 현재 데이터는 메모리에만 저장되는 프로토타입입니다. 서버가 재시작되면 대기열 정보가 초기화됩니다.
-- 운영 환경에 배포하려면 SQLite/PostgreSQL 등 영속 저장소 연결이 필요합니다.
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 환경변수가 없으면 메모리에만 저장합니다(로컬 개발용, 서버 재시작 시 초기화됨).
+두 환경변수를 설정하면 자동으로 Supabase(Postgres)에 저장하도록 전환되어, Vercel/Netlify 같은 서버리스 환경에 배포해도 대기열 데이터가 유지됩니다.
+
+### Supabase 설정 방법
+
+1. https://supabase.com 에서 새 프로젝트 생성
+2. 프로젝트의 SQL Editor에서 아래 스크립트 실행
+
+```sql
+create table waitlist_entries (
+  id bigint generated always as identity primary key,
+  token uuid not null default gen_random_uuid(),
+  name text not null,
+  phone text default '',
+  party_size int not null,
+  registered_at timestamptz not null default now(),
+  became_first_at timestamptz,
+  status text not null default 'waiting'
+);
+
+create table waitlist_settings (
+  id int primary key default 1,
+  business_name text not null default '내 매장',
+  no_show_minutes int not null default 10
+);
+
+insert into waitlist_settings (id, business_name, no_show_minutes)
+values (1, '내 매장', 10)
+on conflict (id) do nothing;
+```
+
+3. 프로젝트 설정(Project Settings → API)에서 **Project URL**과 **service_role 키**를 확인
+4. 배포 환경(Vercel/Netlify 등)의 환경변수에 아래 두 값을 등록
+
+```
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+`service_role` 키는 서버(`server.js`)에서만 사용되며 브라우저로 노출되지 않습니다. 절대 프론트엔드 코드나 공개 저장소에 직접 커밋하지 마세요.

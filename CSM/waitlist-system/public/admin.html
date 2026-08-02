@@ -15,6 +15,7 @@ body{display:block;padding:24px 16px}
 </style>
 </head>
 <body>
+<div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="page">
 <nav class="tabs">
   <button class="tab-btn" id="tabBtnStatus" data-tab="status">대기열 현황</button>
@@ -61,6 +62,10 @@ body{display:block;padding:24px 16px}
   <label>노쇼 제한시간 (분)</label>
   <input type="number" id="noShowMinutes" min="1" placeholder="10">
 
+  <label>영업 마감 시간</label>
+  <input type="time" id="closingTime" placeholder="22:00">
+  <p class="hint" style="margin-top:6px;text-align:left">마감 시간이 지나면 남아있는 대기가 자동으로 취소됩니다.</p>
+
   <button id="saveSettingsBtn">설정 저장</button>
   <div class="error" id="settingsErr"></div>
   <div class="hint" id="settingsSaved" style="display:none">저장되었습니다.</div>
@@ -68,6 +73,7 @@ body{display:block;padding:24px 16px}
 </div>
 </div>
 
+<script src="progress.js"></script>
 <script>
 const tbody = document.getElementById('tbody');
 const err = document.getElementById('err');
@@ -75,10 +81,16 @@ const settingsErr = document.getElementById('settingsErr');
 const settingsSaved = document.getElementById('settingsSaved');
 
 async function loadSettings() {
-  const res = await fetch('/api/settings');
-  const data = await res.json();
-  document.getElementById('businessName').value = data.businessName;
-  document.getElementById('noShowMinutes').value = data.noShowMinutes;
+  showProgress();
+  try {
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+    document.getElementById('businessName').value = data.businessName;
+    document.getElementById('noShowMinutes').value = data.noShowMinutes;
+    document.getElementById('closingTime').value = data.closingTime;
+  } finally {
+    hideProgress();
+  }
 }
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
@@ -86,22 +98,27 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   settingsSaved.style.display = 'none';
   const businessName = document.getElementById('businessName').value.trim();
   const noShowMinutes = document.getElementById('noShowMinutes').value;
+  const closingTime = document.getElementById('closingTime').value;
+  showProgress();
   try {
     const res = await fetch('/api/admin/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessName, noShowMinutes }),
+      body: JSON.stringify({ businessName, noShowMinutes, closingTime }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '저장에 실패했습니다.');
     settingsSaved.style.display = 'block';
   } catch (e) {
     settingsErr.textContent = e.message;
+  } finally {
+    hideProgress();
   }
 });
 
 async function load() {
   err.textContent = '';
+  showProgress();
   try {
     const res = await fetch('/api/admin/queue');
     const data = await res.json();
@@ -109,6 +126,8 @@ async function load() {
     render(data.queue);
   } catch (e) {
     err.textContent = e.message;
+  } finally {
+    hideProgress();
   }
 }
 
@@ -137,8 +156,13 @@ function render(queue) {
 
 async function cancel(id) {
   if (!confirm('이 손님을 대기열에서 취소 처리할까요?')) return;
-  await fetch(`/api/admin/cancel/${id}`, { method: 'POST' });
-  load();
+  showProgress();
+  try {
+    await fetch(`/api/admin/cancel/${id}`, { method: 'POST' });
+    await load();
+  } finally {
+    hideProgress();
+  }
 }
 
 function escapeHtml(s) {

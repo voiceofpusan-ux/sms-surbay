@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
   <h1 id="title">대기 등록</h1>
   <p class="desc">이름과 인원수를 입력하고 등록하면, 문자 없이 이 웹페이지에서 대기 순서를 바로 확인하실 수 있습니다.</p>
@@ -28,11 +29,21 @@
   <div class="error" id="err"></div>
 </div>
 
+<script src="progress.js"></script>
 <script>
 const form = document.getElementById('regForm');
 const err = document.getElementById('err');
 const checking = document.getElementById('checking');
 const TOKEN_KEY = 'waitlistToken';
+const VISITOR_KEY = 'waitlistVisitorId';
+
+// 손님을 특정하지 않고도(연락처 미입력 시) 재방문 여부를 알 수 있도록,
+// 이 브라우저에 고정된 방문자 ID를 하나 만들어 둔다.
+let visitorId = localStorage.getItem(VISITOR_KEY);
+if (!visitorId) {
+  visitorId = crypto.randomUUID();
+  localStorage.setItem(VISITOR_KEY, visitorId);
+}
 
 fetch('/api/settings')
   .then((res) => res.json())
@@ -50,6 +61,7 @@ async function checkSavedToken() {
     showForm();
     return;
   }
+  showProgress();
   try {
     const res = await fetch(`/api/status/${savedToken}`);
     const data = await res.json();
@@ -59,6 +71,8 @@ async function checkSavedToken() {
     }
   } catch (e) {
     // 확인 실패 시에도 등록 폼은 보여준다
+  } finally {
+    hideProgress();
   }
   localStorage.removeItem(TOKEN_KEY);
   showForm();
@@ -77,19 +91,24 @@ form.addEventListener('submit', async (e) => {
   const name = document.getElementById('name').value.trim();
   const partySize = document.getElementById('partySize').value;
   const phone = document.getElementById('phone').value.trim();
+  const submitBtn = form.querySelector('button[type=submit]');
 
+  showProgress();
+  submitBtn.disabled = true;
   try {
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, partySize, phone }),
+      body: JSON.stringify({ name, partySize, phone, visitorId }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
     localStorage.setItem(TOKEN_KEY, data.token);
-    location.href = `status.html?token=${data.token}`;
+    location.href = `status.html?token=${data.token}&visit=${data.visitCount}`;
   } catch (e2) {
     err.textContent = e2.message;
+    submitBtn.disabled = false;
+    hideProgress();
   }
 });
 </script>

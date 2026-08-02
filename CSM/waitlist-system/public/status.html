@@ -7,9 +7,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
   <h1 id="title">대기 현황</h1>
   <p class="desc">문자는 보내지 않습니다. 원하실 때 아래 새로고침 버튼을 눌러 최신 순서를 확인해 주세요.</p>
+
+  <div class="banner" id="visitBanner" style="display:none"></div>
 
   <div class="status-box" id="box">
     <div class="big" id="big">-</div>
@@ -38,15 +41,18 @@
   <p class="hint">직원 안내에 따라 매장에 착석하신 후에만 착석확인을 눌러주세요.</p>
 </div>
 
+<script src="progress.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const token = params.get('token');
+const visitCount = params.get('visit') ? Number(params.get('visit')) : null;
 const big = document.getElementById('big');
 const msg = document.getElementById('msg');
 const sub = document.getElementById('sub');
 const box = document.getElementById('box');
 const err = document.getElementById('err');
 const confirmBtn = document.getElementById('confirmBtn');
+const visitBanner = document.getElementById('visitBanner');
 
 if (!token) {
   msg.textContent = '등록 정보가 없습니다. 처음 화면에서 다시 등록해주세요.';
@@ -56,14 +62,25 @@ if (!token) {
 
 async function load() {
   err.textContent = '';
+  showProgress();
   try {
     const res = await fetch(`/api/status/${token}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
     render(data);
+    renderVisitBanner(data.businessName);
   } catch (e) {
     err.textContent = e.message;
+  } finally {
+    hideProgress();
   }
+}
+
+function renderVisitBanner(businessName) {
+  if (visitCount === null) return;
+  visitBanner.style.display = 'block';
+  visitBanner.textContent =
+    visitCount <= 1 ? `${businessName}에 오신 걸 환영합니다.` : `감사합니다. ${visitCount}번 방문해주셨네요.`;
 }
 
 function render(data) {
@@ -87,6 +104,12 @@ function render(data) {
     big.textContent = '⏱️';
     msg.textContent = '노쇼 처리되었습니다.';
     sub.textContent = '착석확인 시간이 지나 대기가 취소되었습니다. 다시 등록해주세요.';
+    return;
+  }
+  if (data.status === 'closed') {
+    big.textContent = '🌙';
+    msg.textContent = '영업 마감으로 대기가 종료되었습니다.';
+    sub.textContent = '다음 영업일에 다시 등록해주세요.';
     return;
   }
 
@@ -137,13 +160,18 @@ applyAutoRefresh();
 
 confirmBtn.addEventListener('click', async () => {
   err.textContent = '';
+  showProgress();
+  confirmBtn.disabled = true;
   try {
     const res = await fetch(`/api/confirm/${token}`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '처리에 실패했습니다.');
-    load();
+    await load();
   } catch (e) {
     err.textContent = e.message;
+  } finally {
+    confirmBtn.disabled = false;
+    hideProgress();
   }
 });
 </script>

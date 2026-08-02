@@ -7,9 +7,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
   <h1 id="title">대기 현황</h1>
   <p class="desc">문자는 보내지 않습니다. 원하실 때 아래 새로고침 버튼을 눌러 최신 순서를 확인해 주세요.</p>
+
+  <div class="banner" id="visitBanner" style="display:none"></div>
 
   <div class="status-box" id="box">
     <div class="big" id="big">-</div>
@@ -18,21 +21,38 @@
   </div>
 
   <button class="ghost" id="refreshBtn">🔄 새로고침</button>
-  <button class="confirm" id="confirmBtn" style="display:none">착석확인 (매장에 자리 잡으셨다면 눌러주세요)</button>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+    <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px">
+      <input type="checkbox" id="autoRefreshToggle" style="width:auto">
+      자동 새로고침
+    </label>
+    <select id="autoRefreshInterval" style="width:auto;padding:6px 10px;border:1px solid #E2E9F4;border-radius:8px;font-size:13px">
+      <option value="5">5초</option>
+      <option value="10" selected>10초</option>
+      <option value="30">30초</option>
+      <option value="60">1분</option>
+    </select>
+  </div>
+
+  <button class="confirm" id="confirmBtn" style="display:none;margin-top:14px">착석확인 (매장에 자리 잡으셨다면 눌러주세요)</button>
   <div class="error" id="err"></div>
 
   <p class="hint">직원 안내에 따라 매장에 착석하신 후에만 착석확인을 눌러주세요.</p>
 </div>
 
+<script src="progress.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const token = params.get('token');
+const visitCount = params.get('visit') ? Number(params.get('visit')) : null;
 const big = document.getElementById('big');
 const msg = document.getElementById('msg');
 const sub = document.getElementById('sub');
 const box = document.getElementById('box');
 const err = document.getElementById('err');
 const confirmBtn = document.getElementById('confirmBtn');
+const visitBanner = document.getElementById('visitBanner');
 
 if (!token) {
   msg.textContent = '등록 정보가 없습니다. 처음 화면에서 다시 등록해주세요.';
@@ -42,14 +62,25 @@ if (!token) {
 
 async function load() {
   err.textContent = '';
+  showProgress();
   try {
     const res = await fetch(`/api/status/${token}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
     render(data);
+    renderVisitBanner(data.businessName);
   } catch (e) {
     err.textContent = e.message;
+  } finally {
+    hideProgress();
   }
+}
+
+function renderVisitBanner(businessName) {
+  if (visitCount === null) return;
+  visitBanner.style.display = 'block';
+  visitBanner.textContent =
+    visitCount <= 1 ? `${businessName}에 오신 걸 환영합니다.` : `감사합니다. ${visitCount}번 방문해주셨네요.`;
 }
 
 function render(data) {
@@ -75,6 +106,12 @@ function render(data) {
     sub.textContent = '착석확인 시간이 지나 대기가 취소되었습니다. 다시 등록해주세요.';
     return;
   }
+  if (data.status === 'closed') {
+    big.textContent = '🌙';
+    msg.textContent = '영업 마감으로 대기가 종료되었습니다.';
+    sub.textContent = '다음 영업일에 다시 등록해주세요.';
+    return;
+  }
 
   const position = data.position; // 0 = 내 차례, 1 = 1팀 남음
   confirmBtn.style.display = 'block';
@@ -98,15 +135,43 @@ function render(data) {
 
 document.getElementById('refreshBtn').addEventListener('click', load);
 
+const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+const autoRefreshInterval = document.getElementById('autoRefreshInterval');
+let autoRefreshTimer = null;
+
+function applyAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  localStorage.setItem('customerAutoRefresh', autoRefreshToggle.checked ? '1' : '0');
+  localStorage.setItem('customerAutoRefreshSec', autoRefreshInterval.value);
+  if (autoRefreshToggle.checked) {
+    autoRefreshTimer = setInterval(load, Number(autoRefreshInterval.value) * 1000);
+  }
+}
+
+autoRefreshToggle.addEventListener('change', applyAutoRefresh);
+autoRefreshInterval.addEventListener('change', applyAutoRefresh);
+
+autoRefreshToggle.checked = localStorage.getItem('customerAutoRefresh') === '1';
+autoRefreshInterval.value = localStorage.getItem('customerAutoRefreshSec') || '10';
+applyAutoRefresh();
+
 confirmBtn.addEventListener('click', async () => {
   err.textContent = '';
+  showProgress();
+  confirmBtn.disabled = true;
   try {
     const res = await fetch(`/api/confirm/${token}`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '처리에 실패했습니다.');
-    load();
+    await load();
   } catch (e) {
     err.textContent = e.message;
+  } finally {
+    confirmBtn.disabled = false;
+    hideProgress();
   }
 });
 </script>

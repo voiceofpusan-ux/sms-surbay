@@ -7,11 +7,14 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
   <h1 id="title">대기 등록</h1>
   <p class="desc">이름과 인원수를 입력하고 등록하면, 문자 없이 이 웹페이지에서 대기 순서를 바로 확인하실 수 있습니다.</p>
 
-  <form id="regForm">
+  <p class="hint" id="checking">이전 대기 정보를 확인하는 중입니다...</p>
+
+  <form id="regForm" style="display:none">
     <label>이름</label>
     <input type="text" id="name" required placeholder="홍길동">
 
@@ -26,9 +29,21 @@
   <div class="error" id="err"></div>
 </div>
 
+<script src="progress.js"></script>
 <script>
 const form = document.getElementById('regForm');
 const err = document.getElementById('err');
+const checking = document.getElementById('checking');
+const TOKEN_KEY = 'waitlistToken';
+const VISITOR_KEY = 'waitlistVisitorId';
+
+// 손님을 특정하지 않고도(연락처 미입력 시) 재방문 여부를 알 수 있도록,
+// 이 브라우저에 고정된 방문자 ID를 하나 만들어 둔다.
+let visitorId = localStorage.getItem(VISITOR_KEY);
+if (!visitorId) {
+  visitorId = crypto.randomUUID();
+  localStorage.setItem(VISITOR_KEY, visitorId);
+}
 
 fetch('/api/settings')
   .then((res) => res.json())
@@ -37,24 +52,63 @@ fetch('/api/settings')
   })
   .catch(() => {});
 
+// 이 브라우저에 저장된 대기 토큰이 있으면, 아직 대기 중인지 확인해서
+// 유효하면 등록 폼 대신 바로 대기 현황 페이지로 보내준다.
+// (착석/노쇼/취소 등으로 이미 끝난 대기라면 저장된 토큰을 지우고 새로 등록하게 한다.)
+async function checkSavedToken() {
+  const savedToken = localStorage.getItem(TOKEN_KEY);
+  if (!savedToken) {
+    showForm();
+    return;
+  }
+  showProgress();
+  try {
+    const res = await fetch(`/api/status/${savedToken}`);
+    const data = await res.json();
+    if (res.ok && data.status === 'waiting') {
+      location.href = `status.html?token=${savedToken}`;
+      return;
+    }
+  } catch (e) {
+    // 확인 실패 시에도 등록 폼은 보여준다
+  } finally {
+    hideProgress();
+  }
+  localStorage.removeItem(TOKEN_KEY);
+  showForm();
+}
+
+function showForm() {
+  checking.style.display = 'none';
+  form.style.display = 'block';
+}
+
+checkSavedToken();
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   err.textContent = '';
   const name = document.getElementById('name').value.trim();
   const partySize = document.getElementById('partySize').value;
   const phone = document.getElementById('phone').value.trim();
+  const submitBtn = form.querySelector('button[type=submit]');
 
+  showProgress();
+  submitBtn.disabled = true;
   try {
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, partySize, phone }),
+      body: JSON.stringify({ name, partySize, phone, visitorId }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
-    location.href = `status.html?token=${data.token}`;
+    localStorage.setItem(TOKEN_KEY, data.token);
+    location.href = `status.html?token=${data.token}&visit=${data.visitCount}`;
   } catch (e2) {
     err.textContent = e2.message;
+    submitBtn.disabled = false;
+    hideProgress();
   }
 });
 </script>

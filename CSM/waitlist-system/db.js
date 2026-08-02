@@ -11,7 +11,7 @@ const supabase = useSupabase ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_
 // 서버리스(Vercel/Netlify)에 배포할 때는 반드시 두 환경변수를 설정해야 대기열이 유지된다.
 let memEntries = [];
 let memNextId = 1;
-let memSettings = { businessName: '내 매장', noShowMinutes: 10 };
+let memSettings = { businessName: '내 매장', noShowMinutes: 10, closingTime: '22:00' };
 
 function mapRow(row) {
   return {
@@ -20,6 +20,7 @@ function mapRow(row) {
     name: row.name,
     phone: row.phone,
     partySize: row.party_size,
+    visitorId: row.visitor_id || null,
     registeredAt: new Date(row.registered_at).getTime(),
     becameFirstAt: row.became_first_at ? new Date(row.became_first_at).getTime() : null,
     status: row.status,
@@ -30,25 +31,33 @@ async function getSettings() {
   if (!useSupabase) return { ...memSettings };
   const { data, error } = await supabase.from('waitlist_settings').select('*').eq('id', 1).single();
   if (error) throw error;
-  return { businessName: data.business_name, noShowMinutes: data.no_show_minutes };
+  return {
+    businessName: data.business_name,
+    noShowMinutes: data.no_show_minutes,
+    closingTime: data.closing_time || '22:00',
+  };
 }
 
-async function updateSettings({ businessName, noShowMinutes }) {
+async function updateSettings({ businessName, noShowMinutes, closingTime }) {
   if (!useSupabase) {
-    memSettings = { businessName, noShowMinutes };
+    memSettings = { businessName, noShowMinutes, closingTime };
     return { ...memSettings };
   }
   const { data, error } = await supabase
     .from('waitlist_settings')
-    .update({ business_name: businessName, no_show_minutes: noShowMinutes })
+    .update({ business_name: businessName, no_show_minutes: noShowMinutes, closing_time: closingTime })
     .eq('id', 1)
     .select()
     .single();
   if (error) throw error;
-  return { businessName: data.business_name, noShowMinutes: data.no_show_minutes };
+  return {
+    businessName: data.business_name,
+    noShowMinutes: data.no_show_minutes,
+    closingTime: data.closing_time || '22:00',
+  };
 }
 
-async function insertEntry({ name, phone, partySize }) {
+async function insertEntry({ name, phone, partySize, visitorId }) {
   if (!useSupabase) {
     const entry = {
       id: memNextId++,
@@ -56,6 +65,7 @@ async function insertEntry({ name, phone, partySize }) {
       name,
       phone: phone || '',
       partySize,
+      visitorId: visitorId || null,
       registeredAt: Date.now(),
       becameFirstAt: null,
       status: 'waiting',
@@ -65,7 +75,7 @@ async function insertEntry({ name, phone, partySize }) {
   }
   const { data, error } = await supabase
     .from('waitlist_entries')
-    .insert({ name, phone: phone || '', party_size: partySize, status: 'waiting' })
+    .insert({ name, phone: phone || '', party_size: partySize, visitor_id: visitorId || null, status: 'waiting' })
     .select()
     .single();
   if (error) throw error;
@@ -116,6 +126,31 @@ async function updateEntry(id, updates) {
   return mapRow(data);
 }
 
+// 손님이 이전에 착석 완료(seated)한 횟수. 연락처가 있으면 연락처로, 없으면 방문자 ID(브라우저 기준)로 집계한다.
+async function countPastVisits({ phone, visitorId }) {
+  if (phone) {
+    if (!useSupabase) return memEntries.filter((e) => e.status === 'seated' && e.phone === phone).length;
+    const { count, error } = await supabase
+      .from('waitlist_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'seated')
+      .eq('phone', phone);
+    if (error) throw error;
+    return count || 0;
+  }
+  if (visitorId) {
+    if (!useSupabase) return memEntries.filter((e) => e.status === 'seated' && e.visitorId === visitorId).length;
+    const { count, error } = await supabase
+      .from('waitlist_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'seated')
+      .eq('visitor_id', visitorId);
+    if (error) throw error;
+    return count || 0;
+  }
+  return 0;
+}
+
 module.exports = {
   useSupabase,
   getSettings,
@@ -125,4 +160,5 @@ module.exports = {
   getEntryById,
   getWaitingEntries,
   updateEntry,
+  countPastVisits,
 };

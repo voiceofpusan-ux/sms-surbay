@@ -38,6 +38,7 @@ create table waitlist_entries (
   name text not null,
   phone text default '',
   party_size int not null,
+  visitor_id text,
   registered_at timestamptz not null default now(),
   became_first_at timestamptz,
   status text not null default 'waiting'
@@ -46,11 +47,12 @@ create table waitlist_entries (
 create table waitlist_settings (
   id int primary key default 1,
   business_name text not null default '내 매장',
-  no_show_minutes int not null default 10
+  no_show_minutes int not null default 10,
+  closing_time text not null default '22:00'
 );
 
-insert into waitlist_settings (id, business_name, no_show_minutes)
-values (1, '내 매장', 10)
+insert into waitlist_settings (id, business_name, no_show_minutes, closing_time)
+values (1, '내 매장', 10, '22:00')
 on conflict (id) do nothing;
 ```
 
@@ -63,3 +65,12 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
 `service_role` 키는 서버(`server.js`)에서만 사용되며 브라우저로 노출되지 않습니다. 절대 프론트엔드 코드나 공개 저장소에 직접 커밋하지 마세요.
+
+### 기존에 Supabase를 이미 연결해두었다면 (마이그레이션)
+
+방문자 재방문 집계, 영업 마감 자동 취소 기능을 위해 컬럼이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
+
+```sql
+alter table waitlist_entries add column if not exists visitor_id text;
+alter table waitlist_settings add column if not exists closing_time text not null default '22:00';
+```

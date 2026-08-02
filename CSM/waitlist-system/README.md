@@ -48,11 +48,11 @@ create table waitlist_settings (
   id int primary key default 1,
   business_name text not null default '내 매장',
   no_show_minutes int not null default 10,
-  closing_time text not null default '22:00'
+  closing_time text not null default '23:59'
 );
 
 insert into waitlist_settings (id, business_name, no_show_minutes, closing_time)
-values (1, '내 매장', 10, '22:00')
+values (1, '내 매장', 10, '23:59')
 on conflict (id) do nothing;
 ```
 
@@ -72,5 +72,5 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ```sql
 alter table waitlist_entries add column if not exists visitor_id text;
-alter table waitlist_settings add column if not exists closing_time text not null default '22:00';
+alter table waitlist_settings add column if not exists closing_time text not null default '23:59';
 ```

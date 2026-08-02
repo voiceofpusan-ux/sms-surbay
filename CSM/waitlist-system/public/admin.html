@@ -5,9 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>대기열 관리 (직원용)</title>
 <link rel="stylesheet" href="style.css">
-<style>.card{max-width:640px}</style>
+<style>
+.card{max-width:640px}
+body{display:block;padding:24px 16px}
+.page{max-width:640px;margin:0 auto}
+.tabs{display:flex;gap:8px;margin-bottom:16px;background:#fff;padding:6px;border-radius:10px;box-shadow:0 4px 16px rgba(13,27,62,.06)}
+.tab-btn{flex:1;padding:12px;border:none;border-radius:8px;background:transparent;color:#556077;font-size:14px;font-weight:700;cursor:pointer}
+.tab-btn.active{background:#0D1B3E;color:#fff}
+</style>
 </head>
 <body>
+<div class="page">
+<nav class="tabs">
+  <button class="tab-btn" id="tabBtnStatus" data-tab="status">대기열 현황</button>
+  <button class="tab-btn" id="tabBtnSettings" data-tab="settings">대기열 관리 설정</button>
+</nav>
+
+<div class="tab-panel" id="tabStatus">
 <div class="card">
   <h1>대기열 현황</h1>
   <p class="desc">손님이 직접 착석확인을 누르면 이 목록에서 자동으로 사라집니다. 연락이 안 되거나 오지 않는 손님은 취소 처리해주세요.</p>
@@ -34,8 +48,10 @@
   </table>
   <div class="error" id="err"></div>
 </div>
+</div>
 
-<div class="card" style="margin-top:16px">
+<div class="tab-panel" id="tabSettings" style="display:none">
+<div class="card">
   <h1>대기열 관리 설정</h1>
   <p class="desc">손님 화면에 표시될 업체명과, 내 차례가 된 뒤 자동 노쇼 처리까지 걸리는 시간을 설정합니다.</p>
 
@@ -48,6 +64,8 @@
   <button id="saveSettingsBtn">설정 저장</button>
   <div class="error" id="settingsErr"></div>
   <div class="hint" id="settingsSaved" style="display:none">저장되었습니다.</div>
+</div>
+</div>
 </div>
 
 <script>
@@ -154,6 +172,20 @@ autoRefreshInterval.value = localStorage.getItem('waitlistAutoRefreshSec') || '1
 loadSettings();
 load();
 applyAutoRefresh();
+
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanels = { status: document.getElementById('tabStatus'), settings: document.getElementById('tabSettings') };
+
+function showTab(name) {
+  tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === name));
+  Object.entries(tabPanels).forEach(([key, panel]) => {
+    panel.style.display = key === name ? 'block' : 'none';
+  });
+  localStorage.setItem('waitlistAdminTab', name);
+}
+
+tabButtons.forEach((btn) => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+showTab(localStorage.getItem('waitlistAdminTab') || 'status');
 </script>
 </body>
 </html>

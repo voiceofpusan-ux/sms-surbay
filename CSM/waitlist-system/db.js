@@ -12,6 +12,8 @@ const supabase = useSupabase ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_
 let memEntries = [];
 let memNextId = 1;
 let memSettings = { businessName: '내 매장', noShowMinutes: 10, closingTime: '23:59' };
+let memMenuItems = [];
+let memMenuNextId = 1;
 
 function mapRow(row) {
   return {
@@ -151,6 +153,49 @@ async function countPastVisits({ phone, visitorId }) {
   return 0;
 }
 
+function mapMenuRow(row) {
+  return { id: row.id, name: row.name, price: row.price, available: row.available };
+}
+
+// 메뉴/가격 (id 등록 순서대로 정렬)
+async function getMenuItems() {
+  if (!useSupabase) return [...memMenuItems].sort((a, b) => a.id - b.id);
+  const { data, error } = await supabase.from('menu_items').select('*').order('id', { ascending: true });
+  if (error) throw error;
+  return data.map(mapMenuRow);
+}
+
+async function insertMenuItem({ name, price }) {
+  if (!useSupabase) {
+    const item = { id: memMenuNextId++, name, price, available: true };
+    memMenuItems.push(item);
+    return item;
+  }
+  const { data, error } = await supabase.from('menu_items').insert({ name, price, available: true }).select().single();
+  if (error) throw error;
+  return mapMenuRow(data);
+}
+
+async function updateMenuItem(id, updates) {
+  if (!useSupabase) {
+    const item = memMenuItems.find((m) => m.id === id);
+    if (item) Object.assign(item, updates);
+    return item || null;
+  }
+  const { data, error } = await supabase.from('menu_items').update(updates).eq('id', id).select().single();
+  if (error) throw error;
+  return mapMenuRow(data);
+}
+
+async function deleteMenuItem(id) {
+  if (!useSupabase) {
+    memMenuItems = memMenuItems.filter((m) => m.id !== id);
+    return;
+  }
+  const { error } = await supabase.from('menu_items').delete().eq('id', id);
+  if (error) throw error;
+}
+
 module.exports = {
   useSupabase,
   getSettings,
@@ -161,4 +206,8 @@ module.exports = {
   getWaitingEntries,
   updateEntry,
   countPastVisits,
+  getMenuItems,
+  insertMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
 };

@@ -193,6 +193,66 @@ app.post('/api/admin/cancel/:id', async (req, res) => {
   }
 });
 
+// 메뉴 조회 (손님/직원 공용 - 손님 화면에서는 대기 중 메뉴 미리보기로 사용)
+app.get('/api/menu', async (req, res) => {
+  try {
+    res.json({ menu: await db.getMenuItems() });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// 관리자: 메뉴 추가
+app.post('/api/admin/menu', async (req, res) => {
+  try {
+    const { name, price } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: '메뉴명을 입력해주세요.' });
+    }
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      return res.status(400).json({ error: '가격은 0 이상의 숫자로 입력해주세요.' });
+    }
+    const item = await db.insertMenuItem({ name: String(name).trim(), price: priceNum });
+    res.json(item);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// 관리자: 메뉴 수정 (이름/가격/판매상태)
+app.post('/api/admin/menu/:id', async (req, res) => {
+  try {
+    const { name, price, available } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: '메뉴명을 입력해주세요.' });
+    }
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      return res.status(400).json({ error: '가격은 0 이상의 숫자로 입력해주세요.' });
+    }
+    const item = await db.updateMenuItem(Number(req.params.id), {
+      name: String(name).trim(),
+      price: priceNum,
+      available: Boolean(available),
+    });
+    if (!item) return res.status(404).json({ error: '해당 메뉴를 찾을 수 없습니다.' });
+    res.json(item);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+// 관리자: 메뉴 삭제
+app.delete('/api/admin/menu/:id', async (req, res) => {
+  try {
+    await db.deleteMenuItem(Number(req.params.id));
+    res.json({ ok: true });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
 // Vercel 등 서버리스 환경에서는 app을 그대로 핸들러로 사용하고, 로컬(node server.js)에서만 listen한다.
 if (require.main === module) {
   app.listen(PORT, () => {

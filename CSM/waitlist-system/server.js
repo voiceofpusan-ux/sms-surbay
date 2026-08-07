@@ -88,20 +88,40 @@ app.post('/api/admin/settings', async (req, res) => {
   }
 });
 
+// 손님이 등록 시 함께 보낸 메뉴 선택(id/수량)을, 서버가 갖고 있는 실제 메뉴 목록과 대조해
+// 이름/가격을 다시 채우고 판매 중이 아니거나 존재하지 않는 항목은 걸러낸다(클라이언트 값은 신뢰하지 않음).
+async function resolveOrderItems(rawItems) {
+  if (!Array.isArray(rawItems) || rawItems.length === 0) return [];
+  const menu = await db.getMenuItems();
+  const menuById = new Map(menu.map((m) => [m.id, m]));
+  const resolved = [];
+  for (const raw of rawItems) {
+    const id = Number(raw && raw.id);
+    const qty = Number(raw && raw.qty);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    const item = menuById.get(id);
+    if (!item || !item.available) continue;
+    resolved.push({ id: item.id, name: item.name, price: item.price, qty });
+  }
+  return resolved;
+}
+
 // 손님 셀프 등록
 app.post('/api/register', async (req, res) => {
   try {
-    const { name, phone, partySize, visitorId } = req.body;
+    const { name, phone, partySize, visitorId, orderItems } = req.body;
     if (!name || !partySize) {
       return res.status(400).json({ error: 'name과 partySize는 필수입니다.' });
     }
     const trimmedPhone = phone ? String(phone).trim() : '';
     const pastVisits = await db.countPastVisits({ phone: trimmedPhone, visitorId });
+    const resolvedItems = await resolveOrderItems(orderItems);
     const entry = await db.insertEntry({
       name: String(name).trim(),
       phone: trimmedPhone,
       partySize: Number(partySize),
       visitorId,
+      orderItems: resolvedItems,
     });
     res.json({ token: entry.token, visitCount: pastVisits + 1 });
   } catch (err) {
@@ -126,6 +146,7 @@ app.get('/api/status/:token', async (req, res) => {
         position: null,
         businessName: settings.businessName,
         noShowMinutes: settings.noShowMinutes,
+        orderItems: entry.orderItems,
       });
     }
 
@@ -138,6 +159,7 @@ app.get('/api/status/:token', async (req, res) => {
       position,
       businessName: settings.businessName,
       noShowMinutes: settings.noShowMinutes,
+      orderItems: entry.orderItems,
     });
   } catch (err) {
     handleError(res, err);
@@ -174,6 +196,7 @@ app.get('/api/admin/queue', async (req, res) => {
         phone: e.phone,
         partySize: e.partySize,
         waitingMinutes: Math.floor((now - e.registeredAt) / 60000),
+        orderItems: e.orderItems,
       })),
     });
   } catch (err) {

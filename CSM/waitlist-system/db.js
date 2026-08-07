@@ -26,6 +26,7 @@ function mapRow(row) {
     registeredAt: new Date(row.registered_at).getTime(),
     becameFirstAt: row.became_first_at ? new Date(row.became_first_at).getTime() : null,
     status: row.status,
+    orderItems: row.order_items || [],
   };
 }
 
@@ -59,7 +60,7 @@ async function updateSettings({ businessName, noShowMinutes, closingTime }) {
   };
 }
 
-async function insertEntry({ name, phone, partySize, visitorId }) {
+async function insertEntry({ name, phone, partySize, visitorId, orderItems }) {
   if (!useSupabase) {
     const entry = {
       id: memNextId++,
@@ -71,13 +72,21 @@ async function insertEntry({ name, phone, partySize, visitorId }) {
       registeredAt: Date.now(),
       becameFirstAt: null,
       status: 'waiting',
+      orderItems: orderItems || [],
     };
     memEntries.push(entry);
     return entry;
   }
   const { data, error } = await supabase
     .from('waitlist_entries')
-    .insert({ name, phone: phone || '', party_size: partySize, visitor_id: visitorId || null, status: 'waiting' })
+    .insert({
+      name,
+      phone: phone || '',
+      party_size: partySize,
+      visitor_id: visitorId || null,
+      status: 'waiting',
+      order_items: orderItems || [],
+    })
     .select()
     .single();
   if (error) throw error;

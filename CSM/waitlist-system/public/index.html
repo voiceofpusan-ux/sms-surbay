@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>대기 등록</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.menu-select-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E2E9F4; }
+.menu-select-row:last-child { border-bottom: none; }
+.menu-select-name { font-size: 14px; font-weight: 700; }
+.menu-select-price { font-size: 12px; font-weight: 400; color: #8898AA; margin-left: 6px; }
+.qty-stepper { display: flex; align-items: center; gap: 10px; }
+.qty-stepper button { width: 28px; height: 28px; margin: 0; padding: 0; border-radius: 8px; font-size: 16px; line-height: 1; }
+.qty-stepper .qty-value { min-width: 16px; text-align: center; font-size: 14px; font-weight: 700; }
+</style>
 </head>
 <body>
 <div class="progress-bar" id="progressBar"><div class="bar"></div></div>
@@ -23,6 +32,11 @@
 
     <label>연락처 (선택)</label>
     <input type="tel" id="phone" placeholder="010-0000-0000">
+
+    <div id="menuSection" style="display:none">
+      <label>메뉴 선택 (선택, 미리 담아두시면 도착 즉시 준비해드립니다)</label>
+      <div id="menuItems"></div>
+    </div>
 
     <button type="submit">대기 등록하기</button>
   </form>
@@ -83,7 +97,59 @@ function showForm() {
   form.style.display = 'block';
 }
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const menuSection = document.getElementById('menuSection');
+const menuItemsEl = document.getElementById('menuItems');
+
+async function loadMenuOptions() {
+  try {
+    const res = await fetch('/api/menu');
+    const data = await res.json();
+    const available = (data.menu || []).filter((item) => item.available);
+    if (available.length === 0) return;
+
+    menuItemsEl.innerHTML = available
+      .map(
+        (item) => `
+        <div class="menu-select-row" data-id="${item.id}">
+          <span class="menu-select-name">${escapeHtml(item.name)}<span class="menu-select-price">${item.price.toLocaleString()}원</span></span>
+          <div class="qty-stepper">
+            <button type="button" class="qty-minus">−</button>
+            <span class="qty-value">0</span>
+            <button type="button" class="qty-plus">+</button>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+
+    menuItemsEl.querySelectorAll('.menu-select-row').forEach((row) => {
+      const valueEl = row.querySelector('.qty-value');
+      row.querySelector('.qty-minus').addEventListener('click', () => {
+        valueEl.textContent = Math.max(0, Number(valueEl.textContent) - 1);
+      });
+      row.querySelector('.qty-plus').addEventListener('click', () => {
+        valueEl.textContent = Number(valueEl.textContent) + 1;
+      });
+    });
+
+    menuSection.style.display = 'block';
+  } catch (e) {
+    // 메뉴를 불러오지 못해도 대기 등록 자체는 계속 진행할 수 있어야 한다
+  }
+}
+
+function collectOrderItems() {
+  return Array.from(menuItemsEl.querySelectorAll('.menu-select-row'))
+    .map((row) => ({ id: Number(row.dataset.id), qty: Number(row.querySelector('.qty-value').textContent) }))
+    .filter((item) => item.qty > 0);
+}
+
 checkSavedToken();
+loadMenuOptions();
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -96,10 +162,11 @@ form.addEventListener('submit', async (e) => {
   showProgress();
   submitBtn.disabled = true;
   try {
+    const orderItems = collectOrderItems();
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, partySize, phone, visitorId }),
+      body: JSON.stringify({ name, partySize, phone, visitorId, orderItems }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');

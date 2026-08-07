@@ -19,6 +19,7 @@ body{display:block;padding:24px 16px}
 <div class="page">
 <nav class="tabs">
   <button class="tab-btn" id="tabBtnStatus" data-tab="status">대기열 현황</button>
+  <button class="tab-btn" id="tabBtnMenu" data-tab="menu">메뉴 관리</button>
   <button class="tab-btn" id="tabBtnSettings" data-tab="settings">대기열 관리 설정</button>
 </nav>
 
@@ -48,6 +49,29 @@ body{display:block;padding:24px 16px}
     <tbody id="tbody"></tbody>
   </table>
   <div class="error" id="err"></div>
+</div>
+</div>
+
+<div class="tab-panel" id="tabMenu" style="display:none">
+<div class="card">
+  <h1>메뉴 관리</h1>
+  <p class="desc">등록한 메뉴와 가격은 손님 대기 화면에서도 미리 확인할 수 있습니다.</p>
+
+  <label>메뉴명</label>
+  <input type="text" id="menuName" placeholder="예: 초밥 세트">
+
+  <label>가격 (원)</label>
+  <input type="number" id="menuPrice" min="0" placeholder="12000">
+
+  <button id="addMenuBtn">메뉴 추가</button>
+  <div class="error" id="menuErr"></div>
+
+  <table id="menuTable" style="margin-top:20px">
+    <thead>
+      <tr><th>메뉴명</th><th>가격</th><th>판매중</th><th></th></tr>
+    </thead>
+    <tbody id="menuTbody"></tbody>
+  </table>
 </div>
 </div>
 
@@ -169,6 +193,107 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+const menuErr = document.getElementById('menuErr');
+const menuTbody = document.getElementById('menuTbody');
+
+async function loadMenu() {
+  menuErr.textContent = '';
+  showProgress();
+  try {
+    const res = await fetch('/api/menu');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '메뉴 조회에 실패했습니다.');
+    renderMenu(data.menu);
+  } catch (e) {
+    menuErr.textContent = e.message;
+  } finally {
+    hideProgress();
+  }
+}
+
+function renderMenu(items) {
+  menuTbody.innerHTML = '';
+  if (items.length === 0) {
+    menuTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8898AA">등록된 메뉴가 없습니다.</td></tr>';
+    return;
+  }
+  for (const item of items) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="menu-name" value="${escapeHtml(item.name)}" style="width:100%;padding:6px 8px;font-size:13px;border:1px solid #E2E9F4;border-radius:6px"></td>
+      <td><input type="number" min="0" class="menu-price" value="${item.price}" style="width:90px;padding:6px 8px;font-size:13px;border:1px solid #E2E9F4;border-radius:6px"></td>
+      <td style="text-align:center"><input type="checkbox" class="menu-available" ${item.available ? 'checked' : ''} style="width:auto"></td>
+      <td style="white-space:nowrap">
+        <button class="ghost menu-save" data-id="${item.id}" style="width:auto;margin:0;padding:6px 10px;font-size:12px">저장</button>
+        <button class="danger menu-delete" data-id="${item.id}" style="width:auto;margin:0;padding:6px 10px;font-size:12px">삭제</button>
+      </td>
+    `;
+    menuTbody.appendChild(tr);
+  }
+  menuTbody.querySelectorAll('.menu-save').forEach((btn) => {
+    btn.addEventListener('click', () => saveMenuItem(btn.dataset.id, btn.closest('tr')));
+  });
+  menuTbody.querySelectorAll('.menu-delete').forEach((btn) => {
+    btn.addEventListener('click', () => deleteMenuItem(btn.dataset.id));
+  });
+}
+
+document.getElementById('addMenuBtn').addEventListener('click', async () => {
+  menuErr.textContent = '';
+  const name = document.getElementById('menuName').value.trim();
+  const price = document.getElementById('menuPrice').value;
+  showProgress();
+  try {
+    const res = await fetch('/api/admin/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, price }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '메뉴 추가에 실패했습니다.');
+    document.getElementById('menuName').value = '';
+    document.getElementById('menuPrice').value = '';
+    await loadMenu();
+  } catch (e) {
+    menuErr.textContent = e.message;
+  } finally {
+    hideProgress();
+  }
+});
+
+async function saveMenuItem(id, row) {
+  menuErr.textContent = '';
+  const name = row.querySelector('.menu-name').value.trim();
+  const price = row.querySelector('.menu-price').value;
+  const available = row.querySelector('.menu-available').checked;
+  showProgress();
+  try {
+    const res = await fetch(`/api/admin/menu/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, price, available }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '메뉴 저장에 실패했습니다.');
+    await loadMenu();
+  } catch (e) {
+    menuErr.textContent = e.message;
+  } finally {
+    hideProgress();
+  }
+}
+
+async function deleteMenuItem(id) {
+  if (!confirm('이 메뉴를 삭제할까요?')) return;
+  showProgress();
+  try {
+    await fetch(`/api/admin/menu/${id}`, { method: 'DELETE' });
+    await loadMenu();
+  } finally {
+    hideProgress();
+  }
+}
+
 document.getElementById('refreshBtn').addEventListener('click', load);
 
 const autoRefreshToggle = document.getElementById('autoRefreshToggle');
@@ -195,10 +320,15 @@ autoRefreshInterval.value = localStorage.getItem('waitlistAutoRefreshSec') || '1
 
 loadSettings();
 load();
+loadMenu();
 applyAutoRefresh();
 
 const tabButtons = document.querySelectorAll('.tab-btn');
-const tabPanels = { status: document.getElementById('tabStatus'), settings: document.getElementById('tabSettings') };
+const tabPanels = {
+  status: document.getElementById('tabStatus'),
+  menu: document.getElementById('tabMenu'),
+  settings: document.getElementById('tabSettings'),
+};
 
 function showTab(name) {
   tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === name));

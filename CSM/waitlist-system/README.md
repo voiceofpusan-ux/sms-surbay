@@ -10,6 +10,7 @@
    - 내 차례가 되면 "지금 입장하실 차례입니다" 표시
 3. **착석확인**: 손님이 실제로 매장에 착석한 뒤, 직원 안내에 따라 본인이 직접 "착석확인" 버튼 클릭 → 대기열에서 제거되고 뒷사람 순번이 자동으로 당겨짐
 4. **직원 화면**: 대기열 목록을 읽기 전용으로 확인. "다음 손님 호출" 같은 액션은 없으며(순번은 손님의 착석확인으로만 줄어듦), 연락 두절/노쇼 손님만 수동으로 취소 처리
+5. **메뉴 관리**: 관리자 화면의 "메뉴 관리" 탭에서 메뉴명/가격/판매상태를 등록·수정·삭제. 등록된 메뉴는 손님 대기 화면의 "메뉴 보기" 링크(`/menu.html`)에서도 확인 가능
 
 ## 실행 방법
 
@@ -54,6 +55,13 @@ create table waitlist_settings (
 insert into waitlist_settings (id, business_name, no_show_minutes, closing_time)
 values (1, '내 매장', 10, '23:59')
 on conflict (id) do nothing;
+
+create table menu_items (
+  id bigint generated always as identity primary key,
+  name text not null,
+  price int not null,
+  available boolean not null default true
+);
 ```
 
 3. 프로젝트 설정(Project Settings → API)에서 **Project URL**과 **service_role 키**를 확인
@@ -68,9 +76,16 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ### 기존에 Supabase를 이미 연결해두었다면 (마이그레이션)
 
-방문자 재방문 집계, 영업 마감 자동 취소 기능을 위해 컬럼이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
+방문자 재방문 집계, 영업 마감 자동 취소, 메뉴 관리 기능을 위해 컬럼/테이블이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
 
 ```sql
 alter table waitlist_entries add column if not exists visitor_id text;
 alter table waitlist_settings add column if not exists closing_time text not null default '23:59';
+
+create table if not exists menu_items (
+  id bigint generated always as identity primary key,
+  name text not null,
+  price int not null,
+  available boolean not null default true
+);
 ```

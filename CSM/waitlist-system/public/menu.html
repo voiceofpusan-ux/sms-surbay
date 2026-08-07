@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메뉴</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.menu-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #E2E9F4; }
+.menu-row:last-child { border-bottom: none; }
+.menu-row .name { font-size: 15px; font-weight: 700; }
+.menu-row .name.soldout { color: #8898AA; }
+.menu-row .badge { display: inline-block; font-size: 11px; font-weight: 700; color: #d33; border: 1px solid #f3c9c9; border-radius: 20px; padding: 2px 8px; margin-left: 8px; }
+.menu-row .price { font-size: 14px; font-weight: 700; color: #0D1B3E; font-family: 'Inter', -apple-system, sans-serif; }
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"><div class="bar"></div></div>
+<div class="card">
+  <h1 id="title">메뉴</h1>
+  <p class="desc">대기하시는 동안 메뉴를 미리 확인해보세요.</p>
+
+  <div id="menuList"></div>
+  <div class="error" id="err"></div>
+
+  <button class="ghost" onclick="history.back()">← 돌아가기</button>
+</div>
+
+<script src="progress.js"></script>
+<script>
+const menuList = document.getElementById('menuList');
+const err = document.getElementById('err');
+
+fetch('/api/settings')
+  .then((res) => res.json())
+  .then((data) => {
+    document.getElementById('title').textContent = `${data.businessName} 메뉴`;
+  })
+  .catch(() => {});
+
+async function load() {
+  err.textContent = '';
+  showProgress();
+  try {
+    const res = await fetch('/api/menu');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '메뉴를 불러오지 못했습니다.');
+    render(data.menu);
+  } catch (e) {
+    err.textContent = e.message;
+  } finally {
+    hideProgress();
+  }
+}
+
+function render(items) {
+  if (items.length === 0) {
+    menuList.innerHTML = '<p class="hint">등록된 메뉴가 없습니다.</p>';
+    return;
+  }
+  menuList.innerHTML = items
+    .map(
+      (item) => `
+      <div class="menu-row">
+        <span class="name ${item.available ? '' : 'soldout'}">${escapeHtml(item.name)}${item.available ? '' : '<span class="badge">품절</span>'}</span>
+        <span class="price">${item.price.toLocaleString()}원</span>
+      </div>
+    `
+    )
+    .join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+load();
+</script>
+</body>
+</html>

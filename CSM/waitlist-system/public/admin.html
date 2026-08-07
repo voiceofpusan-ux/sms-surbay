@@ -44,7 +44,7 @@ body{display:block;padding:24px 16px}
 
   <table id="table">
     <thead>
-      <tr><th>순번</th><th>이름</th><th>인원</th><th>연락처</th><th>대기시간</th><th></th></tr>
+      <tr><th>순번</th><th>이름</th><th>인원</th><th>연락처</th><th>주문메뉴</th><th>대기시간</th><th></th></tr>
     </thead>
     <tbody id="tbody"></tbody>
   </table>
@@ -155,10 +155,15 @@ async function load() {
   }
 }
 
+function orderSummaryText(orderItems) {
+  if (!orderItems || orderItems.length === 0) return '-';
+  return orderItems.map((item) => `${escapeHtml(item.name)} x${item.qty}`).join(', ');
+}
+
 function render(queue) {
   tbody.innerHTML = '';
   if (queue.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#8898AA">현재 대기 중인 손님이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#8898AA">현재 대기 중인 손님이 없습니다.</td></tr>';
     return;
   }
   for (const e of queue) {
@@ -168,6 +173,7 @@ function render(queue) {
       <td>${escapeHtml(e.name)}</td>
       <td>${e.partySize}명</td>
       <td>${escapeHtml(e.phone) || '-'}</td>
+      <td style="font-size:12px">${orderSummaryText(e.orderItems)}</td>
       <td>${e.waitingMinutes}분</td>
       <td><button class="danger" data-id="${e.id}">취소</button></td>
     `;

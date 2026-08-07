@@ -20,6 +20,8 @@
     <div class="sub" id="sub"></div>
   </div>
 
+  <div id="orderSummary" style="display:none;text-align:left;margin-top:14px;padding:12px 14px;background:#F5F8FE;border-radius:10px;font-size:13px"></div>
+
   <button class="ghost" id="refreshBtn">🔄 새로고침</button>
 
   <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
@@ -87,10 +89,30 @@ function renderVisitBanner(businessName) {
     visitCount <= 1 ? `${businessName}에 오신 걸 환영합니다.` : `감사합니다. ${visitCount}번 방문해주셨네요.`;
 }
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const orderSummary = document.getElementById('orderSummary');
+
+function renderOrderSummary(orderItems) {
+  if (!orderItems || orderItems.length === 0) {
+    orderSummary.style.display = 'none';
+    return;
+  }
+  const total = orderItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const lines = orderItems
+    .map((item) => `${escapeHtml(item.name)} x${item.qty} <span style="color:#8898AA">(${(item.price * item.qty).toLocaleString()}원)</span>`)
+    .join('<br>');
+  orderSummary.innerHTML = `<strong>주문하신 메뉴</strong><br>${lines}<br><strong>합계: ${total.toLocaleString()}원</strong>`;
+  orderSummary.style.display = 'block';
+}
+
 function render(data) {
   box.className = 'status-box';
   confirmBtn.style.display = 'none';
   document.getElementById('title').textContent = `${data.businessName} 대기 현황`;
+  renderOrderSummary(data.orderItems);
 
   if (data.status === 'seated') {
     big.textContent = '✅';

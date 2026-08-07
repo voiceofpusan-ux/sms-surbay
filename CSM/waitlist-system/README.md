@@ -4,13 +4,14 @@
 
 ## 동작 방식
 
-1. **손님 셀프 등록**: 매장 입구 QR코드(또는 링크)로 접속 → 이름/인원수 입력 후 등록 → 본인 전용 확인 페이지로 이동
+1. **손님 셀프 등록**: 매장 입구 QR코드(또는 링크)로 접속 → 이름/인원수 입력, 판매 중인 메뉴가 있으면 원하는 메뉴도 함께 선택 후 등록 → 본인 전용 확인 페이지로 이동
 2. **대기 확인**: 손님이 원할 때(예: 차 안에서) 새로고침 버튼을 누르면 "내 앞에 O팀 대기 중"인지 최신 상태로 확인
    - 앞에 1팀 남으면 "대기손님이 1명입니다, 입장 준비해주세요" 강조 표시
    - 내 차례가 되면 "지금 입장하실 차례입니다" 표시
 3. **착석확인**: 손님이 실제로 매장에 착석한 뒤, 직원 안내에 따라 본인이 직접 "착석확인" 버튼 클릭 → 대기열에서 제거되고 뒷사람 순번이 자동으로 당겨짐
 4. **직원 화면**: 대기열 목록을 읽기 전용으로 확인. "다음 손님 호출" 같은 액션은 없으며(순번은 손님의 착석확인으로만 줄어듦), 연락 두절/노쇼 손님만 수동으로 취소 처리
 5. **메뉴 관리**: 관리자 화면의 "메뉴 관리" 탭에서 메뉴명/가격/판매상태를 등록·수정·삭제. 등록된 메뉴는 손님 대기 화면의 "메뉴 보기" 링크(`/menu.html`)에서도 확인 가능
+6. **메뉴 미리 선택**: 손님이 대기 등록 시 판매 중인 메뉴를 원하는 수량만큼 함께 선택할 수 있음. 선택한 메뉴는 손님 대기 현황 화면과 직원 대기열 화면에 모두 표시되어, 입장 전 미리 준비할 수 있음
 
 ## 실행 방법
 
@@ -42,7 +43,8 @@ create table waitlist_entries (
   visitor_id text,
   registered_at timestamptz not null default now(),
   became_first_at timestamptz,
-  status text not null default 'waiting'
+  status text not null default 'waiting',
+  order_items jsonb not null default '[]'::jsonb
 );
 
 create table waitlist_settings (
@@ -76,10 +78,11 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ### 기존에 Supabase를 이미 연결해두었다면 (마이그레이션)
 
-방문자 재방문 집계, 영업 마감 자동 취소, 메뉴 관리 기능을 위해 컬럼/테이블이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
+방문자 재방문 집계, 영업 마감 자동 취소, 메뉴 관리, 대기 등록 시 메뉴 미리 선택 기능을 위해 컬럼/테이블이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
 
 ```sql
 alter table waitlist_entries add column if not exists visitor_id text;
+alter table waitlist_entries add column if not exists order_items jsonb not null default '[]'::jsonb;
 alter table waitlist_settings add column if not exists closing_time text not null default '23:59';
 
 create table if not exists menu_items (

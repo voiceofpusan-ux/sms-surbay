@@ -17,6 +17,7 @@
 <body>
 <div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
+  <img id="logoImg" class="brand-logo" alt="업체 로고">
   <h1 id="title">메뉴</h1>
   <p class="desc">대기하시는 동안 메뉴를 미리 확인해보세요.</p>
 
@@ -35,6 +36,11 @@ fetch('/api/settings')
   .then((res) => res.json())
   .then((data) => {
     document.getElementById('title').textContent = `${data.businessName} 메뉴`;
+    if (data.logoData) {
+      const logoImg = document.getElementById('logoImg');
+      logoImg.src = data.logoData;
+      logoImg.style.display = 'block';
+    }
   })
   .catch(() => {});
 

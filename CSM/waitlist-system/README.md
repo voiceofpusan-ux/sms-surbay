@@ -13,6 +13,7 @@
 5. **메뉴 관리**: 관리자 화면의 "메뉴 관리" 탭에서 메뉴명/가격/판매상태를 등록·수정·삭제. 등록된 메뉴는 손님 대기 화면의 "메뉴 보기" 링크(`/menu.html`)에서도 확인 가능
 6. **메뉴 미리 선택**: 손님이 대기 등록 시 판매 중인 메뉴를 원하는 수량만큼 함께 선택할 수 있음. 선택한 메뉴는 손님 대기 현황 화면과 직원 대기열 화면에 모두 표시되어, 입장 전 미리 준비할 수 있음
 7. **메뉴 노출 여부 설정**: 관리자 화면의 "대기열 관리 설정" 탭에서 손님 등록화면에 메뉴 선택을 노출할지 껐다 켰다 할 수 있음(기본값: 노출)
+8. **업체 로고**: 관리자 화면의 "대기열 관리 설정" 탭에서 업체명과 함께 로고(PNG, 최대 800KB, 권장 크기 가로 400px x 세로 120px 이내)를 등록할 수 있음. 등록한 로고는 손님 대기 등록/현황/메뉴 화면 상단에 표시됨
 
 ## 실행 방법
 
@@ -53,7 +54,8 @@ create table waitlist_settings (
   business_name text not null default '내 매장',
   no_show_minutes int not null default 10,
   closing_time text not null default '23:59',
-  show_menu_on_register boolean not null default true
+  show_menu_on_register boolean not null default true,
+  logo_data text
 );
 
 insert into waitlist_settings (id, business_name, no_show_minutes, closing_time)
@@ -80,13 +82,14 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ### 기존에 Supabase를 이미 연결해두었다면 (마이그레이션)
 
-방문자 재방문 집계, 영업 마감 자동 취소, 메뉴 관리, 대기 등록 시 메뉴 미리 선택/노출 설정 기능을 위해 컬럼/테이블이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
+방문자 재방문 집계, 영업 마감 자동 취소, 메뉴 관리, 대기 등록 시 메뉴 미리 선택/노출 설정, 업체 로고 기능을 위해 컬럼/테이블이 추가되었습니다. 이미 위 테이블을 만들어두셨다면, SQL Editor에서 아래 스크립트를 한 번 실행해주세요 (기존 데이터는 유지됩니다).
 
 ```sql
 alter table waitlist_entries add column if not exists visitor_id text;
 alter table waitlist_entries add column if not exists order_items jsonb not null default '[]'::jsonb;
 alter table waitlist_settings add column if not exists closing_time text not null default '23:59';
 alter table waitlist_settings add column if not exists show_menu_on_register boolean not null default true;
+alter table waitlist_settings add column if not exists logo_data text;
 
 create table if not exists menu_items (
   id bigint generated always as identity primary key,

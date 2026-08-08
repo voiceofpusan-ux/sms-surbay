@@ -11,7 +11,7 @@ const supabase = useSupabase ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_
 // 서버리스(Vercel/Netlify)에 배포할 때는 반드시 두 환경변수를 설정해야 대기열이 유지된다.
 let memEntries = [];
 let memNextId = 1;
-let memSettings = { businessName: '내 매장', noShowMinutes: 10, closingTime: '23:59', showMenuOnRegister: true };
+let memSettings = { businessName: '내 매장', noShowMinutes: 10, closingTime: '23:59', showMenuOnRegister: true, logoData: null };
 let memMenuItems = [];
 let memMenuNextId = 1;
 
@@ -39,12 +39,13 @@ async function getSettings() {
     noShowMinutes: data.no_show_minutes,
     closingTime: data.closing_time || '23:59',
     showMenuOnRegister: data.show_menu_on_register !== false,
+    logoData: data.logo_data || null,
   };
 }
 
-async function updateSettings({ businessName, noShowMinutes, closingTime, showMenuOnRegister }) {
+async function updateSettings({ businessName, noShowMinutes, closingTime, showMenuOnRegister, logoData }) {
   if (!useSupabase) {
-    memSettings = { businessName, noShowMinutes, closingTime, showMenuOnRegister };
+    memSettings = { businessName, noShowMinutes, closingTime, showMenuOnRegister, logoData: logoData || null };
     return { ...memSettings };
   }
   const { data, error } = await supabase
@@ -54,6 +55,7 @@ async function updateSettings({ businessName, noShowMinutes, closingTime, showMe
       no_show_minutes: noShowMinutes,
       closing_time: closingTime,
       show_menu_on_register: showMenuOnRegister,
+      logo_data: logoData || null,
     })
     .eq('id', 1)
     .select()
@@ -64,6 +66,7 @@ async function updateSettings({ businessName, noShowMinutes, closingTime, showMe
     noShowMinutes: data.no_show_minutes,
     closingTime: data.closing_time || '23:59',
     showMenuOnRegister: data.show_menu_on_register !== false,
+    logoData: data.logo_data || null,
   };
 }
 

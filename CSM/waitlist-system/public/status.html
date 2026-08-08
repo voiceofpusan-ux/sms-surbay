@@ -9,6 +9,7 @@
 <body>
 <div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
+  <img id="logoImg" class="brand-logo" alt="업체 로고">
   <h1 id="title">대기 현황</h1>
   <p class="desc">문자는 보내지 않습니다. 원하실 때 아래 새로고침 버튼을 눌러 최신 순서를 확인해 주세요.</p>
 
@@ -112,6 +113,11 @@ function render(data) {
   box.className = 'status-box';
   confirmBtn.style.display = 'none';
   document.getElementById('title').textContent = `${data.businessName} 대기 현황`;
+  if (data.logoData) {
+    const logoImg = document.getElementById('logoImg');
+    logoImg.src = data.logoData;
+    logoImg.style.display = 'block';
+  }
   renderOrderSummary(data.orderItems);
 
   if (data.status === 'seated') {

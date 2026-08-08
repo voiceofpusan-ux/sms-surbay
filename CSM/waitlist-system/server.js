@@ -5,8 +5,11 @@ const db = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// 업체 로고(PNG, base64) 저장을 위해 기본 1MB 제한을 넉넉히 늘린다.
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+const MAX_LOGO_DATA_URL_LENGTH = 1_100_000; // PNG 원본 약 800KB까지 허용 (base64 인코딩 시 약 1.09MB)
 
 function positionOf(waitingEntries, entry) {
   return waitingEntries.findIndex((e) => e.id === entry.id); // 0 = 내 차례, 1 = 1팀 남음 ...
@@ -66,10 +69,10 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-// 관리자: 업체명/노쇼 제한시간/영업 마감 시간/메뉴 노출 여부 설정 변경
+// 관리자: 업체명/노쇼 제한시간/영업 마감 시간/메뉴 노출 여부/로고 설정 변경
 app.post('/api/admin/settings', async (req, res) => {
   try {
-    const { businessName, noShowMinutes, closingTime, showMenuOnRegister } = req.body;
+    const { businessName, noShowMinutes, closingTime, showMenuOnRegister, logoData } = req.body;
     if (!businessName || !String(businessName).trim()) {
       return res.status(400).json({ error: '업체명을 입력해주세요.' });
     }
@@ -80,12 +83,21 @@ app.post('/api/admin/settings', async (req, res) => {
     if (!closingTime || !/^([01]?\d|2[0-3]):[0-5]\d$/.test(closingTime)) {
       return res.status(400).json({ error: '영업 마감 시간은 HH:MM 형식으로 입력해주세요.' });
     }
+    if (logoData) {
+      if (!/^data:image\/png;base64,/.test(logoData)) {
+        return res.status(400).json({ error: '로고는 PNG 파일만 업로드할 수 있습니다.' });
+      }
+      if (logoData.length > MAX_LOGO_DATA_URL_LENGTH) {
+        return res.status(400).json({ error: '로고 파일 용량이 너무 큽니다 (최대 800KB).' });
+      }
+    }
     res.json(
       await db.updateSettings({
         businessName: String(businessName).trim(),
         noShowMinutes: minutes,
         closingTime,
         showMenuOnRegister: Boolean(showMenuOnRegister),
+        logoData: logoData || null,
       })
     );
   } catch (err) {
@@ -152,6 +164,7 @@ app.get('/api/status/:token', async (req, res) => {
         businessName: settings.businessName,
         noShowMinutes: settings.noShowMinutes,
         orderItems: entry.orderItems,
+        logoData: settings.logoData,
       });
     }
 
@@ -165,6 +178,7 @@ app.get('/api/status/:token', async (req, res) => {
       businessName: settings.businessName,
       noShowMinutes: settings.noShowMinutes,
       orderItems: entry.orderItems,
+      logoData: settings.logoData,
     });
   } catch (err) {
     handleError(res, err);

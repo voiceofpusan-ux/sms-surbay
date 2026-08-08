@@ -18,6 +18,7 @@
 <body>
 <div class="progress-bar" id="progressBar"><div class="bar"></div></div>
 <div class="card">
+  <img id="logoImg" class="brand-logo" alt="업체 로고">
   <h1 id="title">대기 등록</h1>
   <p class="desc">이름과 인원수를 입력하고 등록하면, 문자 없이 이 웹페이지에서 대기 순서를 바로 확인하실 수 있습니다.</p>
 
@@ -63,6 +64,11 @@ fetch('/api/settings')
   .then((res) => res.json())
   .then((data) => {
     document.getElementById('title').textContent = `${data.businessName} 대기 등록`;
+    if (data.logoData) {
+      const logoImg = document.getElementById('logoImg');
+      logoImg.src = data.logoData;
+      logoImg.style.display = 'block';
+    }
     if (data.showMenuOnRegister !== false) loadMenuOptions();
   })
   .catch(() => {});

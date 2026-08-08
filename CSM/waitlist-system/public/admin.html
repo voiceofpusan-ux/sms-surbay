@@ -83,7 +83,15 @@ body{display:block;padding:24px 16px}
   <label>업체명</label>
   <input type="text" id="businessName" placeholder="내 매장">
 
-  <label>노쇼 제한시간 (분)</label>
+  <label>업체 로고 (PNG)</label>
+  <div id="logoPreviewWrap" style="display:none;margin-bottom:10px">
+    <img id="logoPreview" style="max-width:100%;max-height:80px;border:1px solid #E2E9F4;border-radius:8px;padding:6px;background:#fff">
+  </div>
+  <input type="file" id="logoFile" accept="image/png">
+  <p class="hint" style="margin-top:6px;text-align:left">권장 크기: 가로 400px x 세로 120px 이내, PNG 파일, 최대 800KB. 손님 화면 상단에 표시됩니다.</p>
+  <button type="button" class="ghost" id="removeLogoBtn" style="display:none;margin-top:8px">로고 삭제</button>
+
+  <label style="margin-top:16px">노쇼 제한시간 (분)</label>
   <input type="number" id="noShowMinutes" min="1" placeholder="10">
 
   <label>영업 마감 시간</label>
@@ -110,6 +118,25 @@ const err = document.getElementById('err');
 const settingsErr = document.getElementById('settingsErr');
 const settingsSaved = document.getElementById('settingsSaved');
 
+const logoFile = document.getElementById('logoFile');
+const logoPreview = document.getElementById('logoPreview');
+const logoPreviewWrap = document.getElementById('logoPreviewWrap');
+const removeLogoBtn = document.getElementById('removeLogoBtn');
+const MAX_LOGO_BYTES = 800 * 1024;
+let currentLogoData = null;
+
+function showLogoPreview(dataUrl) {
+  if (dataUrl) {
+    logoPreview.src = dataUrl;
+    logoPreviewWrap.style.display = 'block';
+    removeLogoBtn.style.display = 'inline-block';
+  } else {
+    logoPreview.src = '';
+    logoPreviewWrap.style.display = 'none';
+    removeLogoBtn.style.display = 'none';
+  }
+}
+
 async function loadSettings() {
   showProgress();
   try {
@@ -119,10 +146,40 @@ async function loadSettings() {
     document.getElementById('noShowMinutes').value = data.noShowMinutes;
     document.getElementById('closingTime').value = data.closingTime;
     document.getElementById('showMenuOnRegister').checked = data.showMenuOnRegister !== false;
+    currentLogoData = data.logoData || null;
+    showLogoPreview(currentLogoData);
   } finally {
     hideProgress();
   }
 }
+
+logoFile.addEventListener('change', () => {
+  settingsErr.textContent = '';
+  const file = logoFile.files[0];
+  if (!file) return;
+  if (file.type !== 'image/png') {
+    settingsErr.textContent = 'PNG 파일만 업로드할 수 있습니다.';
+    logoFile.value = '';
+    return;
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    settingsErr.textContent = '로고 파일이 너무 큽니다 (최대 800KB).';
+    logoFile.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    currentLogoData = reader.result;
+    showLogoPreview(currentLogoData);
+  };
+  reader.readAsDataURL(file);
+});
+
+removeLogoBtn.addEventListener('click', () => {
+  currentLogoData = null;
+  logoFile.value = '';
+  showLogoPreview(null);
+});
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
   settingsErr.textContent = '';
@@ -136,7 +193,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     const res = await fetch('/api/admin/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessName, noShowMinutes, closingTime, showMenuOnRegister }),
+      body: JSON.stringify({ businessName, noShowMinutes, closingTime, showMenuOnRegister, logoData: currentLogoData }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '저장에 실패했습니다.');

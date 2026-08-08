@@ -63,6 +63,7 @@ fetch('/api/settings')
   .then((res) => res.json())
   .then((data) => {
     document.getElementById('title').textContent = `${data.businessName} 대기 등록`;
+    if (data.showMenuOnRegister !== false) loadMenuOptions();
   })
   .catch(() => {});
 
@@ -149,7 +150,6 @@ function collectOrderItems() {
 }
 
 checkSavedToken();
-loadMenuOptions();
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();

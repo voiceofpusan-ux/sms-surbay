@@ -90,6 +90,12 @@ body{display:block;padding:24px 16px}
   <input type="time" id="closingTime" placeholder="23:59">
   <p class="hint" style="margin-top:6px;text-align:left">마감 시간이 지나면 남아있는 대기가 자동으로 취소됩니다.</p>
 
+  <label style="display:flex;align-items:center;gap:8px;margin-top:16px">
+    <input type="checkbox" id="showMenuOnRegister" style="width:auto">
+    손님 대기 등록화면에 메뉴 선택 노출
+  </label>
+  <p class="hint" style="margin-top:6px;text-align:left">꺼두면 손님이 대기 등록할 때 메뉴를 선택하는 항목이 보이지 않습니다.</p>
+
   <button id="saveSettingsBtn">설정 저장</button>
   <div class="error" id="settingsErr"></div>
   <div class="hint" id="settingsSaved" style="display:none">저장되었습니다.</div>
@@ -112,6 +118,7 @@ async function loadSettings() {
     document.getElementById('businessName').value = data.businessName;
     document.getElementById('noShowMinutes').value = data.noShowMinutes;
     document.getElementById('closingTime').value = data.closingTime;
+    document.getElementById('showMenuOnRegister').checked = data.showMenuOnRegister !== false;
   } finally {
     hideProgress();
   }
@@ -123,12 +130,13 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const businessName = document.getElementById('businessName').value.trim();
   const noShowMinutes = document.getElementById('noShowMinutes').value;
   const closingTime = document.getElementById('closingTime').value;
+  const showMenuOnRegister = document.getElementById('showMenuOnRegister').checked;
   showProgress();
   try {
     const res = await fetch('/api/admin/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessName, noShowMinutes, closingTime }),
+      body: JSON.stringify({ businessName, noShowMinutes, closingTime, showMenuOnRegister }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '저장에 실패했습니다.');

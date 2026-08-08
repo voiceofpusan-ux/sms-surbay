@@ -66,10 +66,10 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-// 관리자: 업체명/노쇼 제한시간/영업 마감 시간 설정 변경
+// 관리자: 업체명/노쇼 제한시간/영업 마감 시간/메뉴 노출 여부 설정 변경
 app.post('/api/admin/settings', async (req, res) => {
   try {
-    const { businessName, noShowMinutes, closingTime } = req.body;
+    const { businessName, noShowMinutes, closingTime, showMenuOnRegister } = req.body;
     if (!businessName || !String(businessName).trim()) {
       return res.status(400).json({ error: '업체명을 입력해주세요.' });
     }
@@ -81,7 +81,12 @@ app.post('/api/admin/settings', async (req, res) => {
       return res.status(400).json({ error: '영업 마감 시간은 HH:MM 형식으로 입력해주세요.' });
     }
     res.json(
-      await db.updateSettings({ businessName: String(businessName).trim(), noShowMinutes: minutes, closingTime })
+      await db.updateSettings({
+        businessName: String(businessName).trim(),
+        noShowMinutes: minutes,
+        closingTime,
+        showMenuOnRegister: Boolean(showMenuOnRegister),
+      })
     );
   } catch (err) {
     handleError(res, err);

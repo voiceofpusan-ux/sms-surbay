@@ -1,0 +1,15 @@
+{
+  "name": "campus-whistle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "철저히 비공개되는 학내 문제 고발 플랫폼 — AI 제목 중재 MVP",
+  "scripts": {
+    "dev": "vercel dev",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
